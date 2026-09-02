@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -n server,client -c yellow,cyan --kill-others \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install"
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
