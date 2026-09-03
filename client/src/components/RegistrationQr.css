@@ -1,0 +1,81 @@
+.registration-qr {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 32rem;
+}
+
+.registration-qr__heading,
+.registration-qr__instructions {
+  margin: 0;
+}
+
+.registration-qr__link {
+  display: grid;
+  gap: 0.25rem;
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+
+.registration-qr__link-label {
+  font-weight: 700;
+}
+
+.registration-qr__link-url {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.registration-qr__link:focus-visible,
+.registration-qr__toggle:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+
+.registration-qr__toggle {
+  display: none;
+}
+
+.registration-qr__code {
+  display: flex;
+  justify-content: center;
+}
+
+.registration-qr__image {
+  display: block;
+  inline-size: min(100%, 16rem);
+  block-size: auto;
+  aspect-ratio: 1;
+  background: #ffffff;
+}
+
+@media (max-width: 47.999rem) {
+  .registration-qr__link {
+    min-block-size: 44px;
+    padding: 0.75rem 1rem;
+    border: 2px solid currentColor;
+    border-radius: 0.5rem;
+  }
+
+  .registration-qr__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 44px;
+    padding: 0.625rem 1rem;
+    border: 1px solid currentColor;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .registration-qr__code {
+    display: none;
+  }
+
+  .registration-qr__code--visible {
+    display: flex;
+  }
+}
