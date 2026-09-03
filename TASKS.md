@@ -38,8 +38,8 @@ touching core event logic**.
 Scheduled events display on a calendar so an organizer can see a given day.
 Month grid *or* grouped-by-day agenda list both acceptable. Library is fine.
 - [x] RED — `server/src/tests/calendar.test.ts` (day grouping + `/api/events` range query)
-- [ ] GREEN — `shared/calendar.ts` grouping + list endpoint
-- [ ] GREEN — client calendar UI
+- [x] GREEN — `shared/calendar.ts` grouping + `GET /api/events?from&to` list endpoint
+- [x] GREEN — client calendar UI: `EventAgenda`, a grouped-by-day agenda list
 
 ### 4. Calendar invite
 Event page offers a downloadable **`.ics`** with correct title, start/end time

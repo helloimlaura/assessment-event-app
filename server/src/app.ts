@@ -4,7 +4,7 @@ import type { Express, NextFunction, Request, Response } from 'express'
 import { ERROR_STATUS } from '../../shared/types'
 import type { ApiError, ErrorCode } from '../../shared/types'
 import type { Db } from './db'
-import { createEventStore, validateCreateEvent } from './domain/events'
+import { createEventStore, validateCreateEvent, validateEventWindow } from './domain/events'
 import { createTemplateRegistry } from './domain/gameTemplates'
 
 export interface AppDeps {
@@ -41,6 +41,22 @@ export function createApp(deps: AppDeps): Express {
    *  visible without changing this route or restarting the process. */
   app.get('/api/games', (_req, res) => {
     res.json({ games: templates.list() })
+  })
+
+  /** Requirement 3: the schedule the calendar renders. An optional
+   *  `?from=&to=` window narrows it — inclusive of `from`, exclusive of `to`,
+   *  so consecutive windows tile without double-counting an event on the
+   *  boundary. Grouping into days is the client's job, using the shared
+   *  `groupEventsByDay`: which local day an event falls on depends on the
+   *  viewer's time zone, and the server does not know it. */
+  app.get('/api/events', (req, res) => {
+    const window = validateEventWindow(req.query as Record<string, unknown>)
+    if (!window.ok) {
+      fail(res, window.code, window.message, window.fields)
+      return
+    }
+
+    res.json({ events: events.list(window.value) })
   })
 
   /** Requirement 1: create an event. The template, not the request body,
