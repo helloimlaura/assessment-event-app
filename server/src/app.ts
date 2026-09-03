@@ -7,6 +7,7 @@ import type { Db } from './db'
 import { createEventStore, validateCreateEvent, validateEventWindow } from './domain/events'
 import { createTemplateRegistry } from './domain/gameTemplates'
 import { buildInvite } from './domain/icsInvite'
+import { createRegistrationStore, validateRegistration } from './domain/registrations'
 
 export interface AppDeps {
   db: Db
@@ -31,6 +32,7 @@ export function createApp(deps: AppDeps): Express {
    *  events. There is no second, code-owned template list to keep in sync. */
   const templates = createTemplateRegistry(deps.db)
   const events = createEventStore(deps.db, deps.publicBaseUrl)
+  const registrations = createRegistrationStore(deps.db)
 
   const app = express()
   app.use(express.json())
@@ -82,6 +84,27 @@ export function createApp(deps: AppDeps): Express {
     }
 
     res.json({ event })
+  })
+
+  /** Requirement 5: take a seat. Capacity is enforced here and nowhere else
+   *  that matters — the client's `isFull` is a label, not a gate, and a bare
+   *  curl gets the same refusal the form does. The store claims the seat with
+   *  one conditional UPDATE, so the last seat is sold exactly once no matter
+   *  how many requests arrive together. */
+  app.post('/api/events/:id/registrations', (req, res) => {
+    const parsed = validateRegistration(req.body)
+    if (!parsed.ok) {
+      fail(res, parsed.code, parsed.message, parsed.fields)
+      return
+    }
+
+    const result = registrations.register(req.params.id, parsed.value)
+    if (!result.ok) {
+      fail(res, result.code, result.message)
+      return
+    }
+
+    res.status(201).json(result.value)
   })
 
   /** Requirement 4: the same event as an .ics for Google Calendar or Outlook.
