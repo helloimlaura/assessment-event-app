@@ -28,7 +28,8 @@ lightweight **template** system, not hard-coded strings. Each template drives
 default/max capacity, minimum players to fire). A **4th game must be addable without
 touching core event logic**.
 - [x] RED — `server/src/tests/gameTemplates.test.ts` (incl. "adding a fourth game")
-- [ ] GREEN — `server/src/domain/gameTemplates.ts` template registry + data
+- [x] GREEN — `server/src/domain/gameTemplates.ts` registry, reading `games` +
+      `event_type_configs`; the seed bootstraps a fresh database
 
 ### 3. Calendar view
 Scheduled events display on a calendar so an organizer can see a given day.
@@ -92,7 +93,7 @@ icsExport 15, registration 17, capacityContention 6.
 ## GREEN order (each step should turn a known set of reds green)
 
 1. `openDatabase` + schema — unblocks every HTTP test.
-2. `GAME_TEMPLATES` + `createTemplateRegistry` — requirement 2.
+2. `createTemplateRegistry` over `games` / `event_type_configs` — requirement 2.
 3. `createApp` with `/api/games` — requirement 2 over HTTP.
 4. `POST /api/events`, `GET /api/events/:id` + validation — requirement 1.
 5. `GET /api/events?from&to` + `groupEventsByDay` — requirement 3.

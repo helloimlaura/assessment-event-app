@@ -92,7 +92,7 @@ describe('rejecting bad event input', () => {
   for (const { why, patch, field } of cases) {
     test(`rejects ${why} with a message naming the field`, async () => {
       const res = await postEvent(srv, patch)
-      assert.equal(res.status, 400, `expected 400 for ${why}`)
+      assert.equal(res.status, 422, `expected 422 for ${why}`)
 
       const err = await errorBody(res)
       assert.equal(err.code, 'VALIDATION_FAILED')
@@ -107,7 +107,7 @@ describe('rejecting bad event input', () => {
   test('rejects a capacity above the maximum the game template allows', async () => {
     // mtg/DRAFT caps below 30; the template, not the global limit, decides.
     const res = await postEvent(srv, { gameId: 'mtg', eventType: 'DRAFT', capacity: 30 })
-    assert.equal(res.status, 400)
+    assert.equal(res.status, 422)
 
     const err = await errorBody(res)
     assert.equal(err.code, 'VALIDATION_FAILED')
@@ -116,7 +116,7 @@ describe('rejecting bad event input', () => {
 
   test('rejects a capacity below the minimum players needed to fire', async () => {
     const res = await postEvent(srv, { gameId: 'mtg', eventType: 'DRAFT', capacity: 2 })
-    assert.equal(res.status, 400)
+    assert.equal(res.status, 422)
     assert.equal((await errorBody(res)).code, 'VALIDATION_FAILED')
   })
 
@@ -126,7 +126,10 @@ describe('rejecting bad event input', () => {
       headers: { 'content-type': 'application/json' },
       body: '{ not json',
     })
+    // 400, not 422: the request could not be parsed at all, so there was
+    // never a well-formed event for the domain to reject.
     assert.equal(res.status, 400)
+    assert.equal((await errorBody(res)).code, 'MALFORMED_BODY')
 
     // still alive
     const ok = await postEvent(srv)

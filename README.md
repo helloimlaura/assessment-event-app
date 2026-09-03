@@ -19,7 +19,7 @@ npm run install:all
 npm run dev
 ```
 
-`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Then open http://localhost:5173 — it should show a message fetched from `/api/hello`.
+`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Then open http://localhost:5173 — it should list the game templates fetched from `/api/games`.
 
 Each side can also be run on its own:
 
@@ -27,6 +27,28 @@ Each side can also be run on its own:
 npm --prefix server run dev
 npm --prefix client run dev
 ```
+
+## API errors
+
+Every error response is `{ "error": { "code", "message", "fields"? } }`. The
+status for each code lives in `ERROR_STATUS` in `shared/types.ts`, which the
+routes and the tests both read, so the server, the suite and this table cannot
+drift apart.
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `MALFORMED_BODY` | The request could not be parsed at all — a body that is not JSON. |
+| 422 | `VALIDATION_FAILED` | Parsed, but a field is wrong: blank name, unparseable start time, capacity outside the template's range, unknown `gameId`. The offending fields are named in `fields`. |
+| 422 | `UNSUPPORTED_EVENT_TYPE` | The game does not run that event type — a Commander pod for Pokémon. |
+| 404 | `NOT_FOUND` | No event with that id, or no such endpoint. |
+| 409 | `EVENT_FULL` | The last seat went to someone else first. |
+| 409 | `DUPLICATE_REGISTRATION` | That player is already registered for this event. |
+| 500 | `INTERNAL` | A bug on our side. |
+
+The 400/422 split is the one worth stating outright: **400 means the request
+was not understood, 422 means it was understood and refused.** A Pokémon
+Commander event is well-formed JSON asking for something the rules do not
+allow, so it answers 422. Only an unparseable body gets 400.
 ## Notes on Ordering and Decisions
 
 With a 3 hour timebox, the priority is getting end-to-end flow implemented and absolutely nailing the "last spot" problem.

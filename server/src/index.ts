@@ -1,13 +1,14 @@
-import express from 'express'
+import { createApp } from './app'
+import { getDatabase } from './db'
 
-const app = express()
-const port = 3001
+const port = Number(process.env.PORT ?? 3001)
 
-app.use(express.json())
+/** Registration links and the QR codes encoding them have to be absolute and
+ *  scannable from a phone that never saw this request, so the origin is
+ *  configuration rather than something read off a Host header. */
+const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`
 
-app.get('/api/hello', (_req, res) => {
-  res.json({ message: 'Hello from the server' })
-})
+const app = createApp({ db: getDatabase(), publicBaseUrl })
 
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`)

@@ -3,7 +3,7 @@ import type { Server } from 'node:http'
 
 import { createApp } from '../app'
 import { openDatabase } from '../db'
-import type { TemplateRegistry } from '../domain/gameTemplates'
+import type { Db } from '../db'
 import type {
   ApiError,
   CreateEventRequest,
@@ -21,14 +21,19 @@ export interface TestServer {
   close: () => Promise<void>
 }
 
+interface TestServerOptions {
+  /** Apply suite-specific database rows before the app is constructed. */
+  prepareDb?: (db: Db) => void
+}
+
 export async function startTestServer(
-  opts: { templates?: TemplateRegistry } = {},
+  opts: TestServerOptions = {},
 ): Promise<TestServer> {
   const db = openDatabase(':memory:')
+  opts.prepareDb?.(db)
   const app = createApp({
     db,
     publicBaseUrl: PUBLIC_BASE_URL,
-    ...(opts.templates ? { templates: opts.templates } : {}),
   })
 
   const server: Server = await new Promise((resolve) => {
@@ -54,7 +59,11 @@ export const VALID_EVENT: CreateEventRequest = {
   eventType: 'DRAFT',
   startsAt: '2026-10-16T18:00:00-07:00',
   location: 'Card Kingdom, 5105 Leary Ave NW, Seattle, WA',
-  capacity: 16,
+  // 8, not 16: mtg/DRAFT is a single booster pod, so its template caps it at
+  // 8. At 16 this "valid" fixture is rejected by the very rule
+  // eventCreation.test.ts asserts, and every suite built on createEvent()
+  // fails for a reason unrelated to what it tests.
+  capacity: 8,
 }
 
 export async function postEvent(

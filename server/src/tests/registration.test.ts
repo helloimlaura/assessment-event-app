@@ -96,7 +96,7 @@ describe('registering a player', () => {
 
   test('a blank name is rejected', async () => {
     const res = await register(srv, event.id, '   ')
-    assert.equal(res.status, 400)
+    assert.equal(res.status, 422)
 
     const err = await errorBody(res)
     assert.equal(err.code, 'VALIDATION_FAILED')

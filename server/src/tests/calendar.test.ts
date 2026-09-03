@@ -133,6 +133,8 @@ describe('listing events for the calendar', () => {
 
   test('a malformed window is rejected rather than silently ignored', async () => {
     const res = await fetch(`${srv.url}/api/events?from=whenever`)
-    assert.equal(res.status, 400)
+    // 422 for the same reason an unparseable startsAt in a body is 422: the
+    // query string parsed fine; the value in it is what the domain refuses.
+    assert.equal(res.status, 422)
   })
 })

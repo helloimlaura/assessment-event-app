@@ -1,10 +1,10 @@
-/** Seed data. This is the ONLY file in the codebase that names a game.
+/** Initial seed data. This is the ONLY production file that names a game.
  *
- *  Game templates live in the database, not in code: `games` holds the game,
- *  `event_type_configs` holds one row per event type that game offers, and each
- *  row carries the four properties an event inherits (duration, default
- *  capacity, max capacity, minimum players). Adding a fourth game is therefore
- *  three inserts and no code change.
+ *  At runtime, game templates live in the database: `games` holds the game and
+ *  `event_type_configs` holds one row per event type it offers. This array only
+ *  bootstraps a fresh database. Adding a fourth game to an existing deployment
+ *  requires one `games` row and one or more `event_type_configs` rows; no
+ *  application code or in-memory registry changes are required.
  *
  *  Absence of a row *is* the rule. There is no `event_type_configs` row for
  *  pokemon/COMMANDER, so no Commander pod can be scheduled for it — and the
@@ -29,7 +29,7 @@ interface GameSeed {
   eventTypes: EventTypeSeed[]
 }
 
-export const GAMES: GameSeed[] = [
+const GAMES: GameSeed[] = [
   {
     id: 'mtg',
     name: 'Magic: The Gathering',
