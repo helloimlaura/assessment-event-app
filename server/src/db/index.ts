@@ -9,8 +9,9 @@ export type Db = BetterSqlite3.Database
 
 const SCHEMA_PATH = join(__dirname, 'schema.sql')
 
-/** `DB_PATH` lets the capacity test point at its own temp file instead of the
- *  seeded development database. */
+/** Where the application's own database file lives. `DB_PATH` overrides it
+ *  for a deployment that keeps state somewhere else. Tests do not go through
+ *  this: they call `openDatabase(':memory:')` directly. */
 export const DEFAULT_DB_PATH = process.env.DB_PATH ?? join(__dirname, '../../data/app.db')
 
 const IN_MEMORY = ':memory:'

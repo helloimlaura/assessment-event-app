@@ -158,31 +158,38 @@ function startsAtIso(now: Date, dayOffset: number, hourUtc: number): string {
   return at.toISOString()
 }
 
-/** Idempotent: safe to call on every database open. Templates are upserted, so
- *  editing a duration here and restarting picks the new value up. */
+/** Idempotent: safe to call on every database open. Existing rows win — this
+ *  only ever fills gaps.
+ *
+ *  That is what makes "the database is the source of truth" true rather than
+ *  approximately true. Upserting would have made this array quietly canonical:
+ *  a config row edited by hand would be silently overwritten by the next
+ *  restart. The cost of the other choice is that editing a value in `GAMES`
+ *  no longer reaches a database that already holds that row — delete
+ *  `server/data/app.db` to re-bootstrap from this file.
+ *
+ *  `ON CONFLICT ... DO NOTHING` rather than `INSERT OR IGNORE`: both leave
+ *  existing rows alone, but `OR IGNORE` suppresses *every* constraint
+ *  violation, so a seed row that broke a CHECK would vanish without a word.
+ *  This ignores exactly one thing — a primary key that is already present. */
 export function seedGameTemplates(db: Db): void {
-  const upsertGame = db.prepare(
+  const insertGame = db.prepare(
     `INSERT INTO games (id, name) VALUES (@id, @name)
-     ON CONFLICT(id) DO UPDATE SET name = excluded.name`,
+     ON CONFLICT(id) DO NOTHING`,
   )
-  const upsertConfig = db.prepare(
+  const insertConfig = db.prepare(
     `INSERT INTO event_type_configs
        (game_id, event_type, label, duration_min, default_capacity, max_capacity, min_players)
      VALUES
        (@gameId, @eventType, @label, @durationMin, @defaultCapacity, @maxCapacity, @minPlayers)
-     ON CONFLICT(game_id, event_type) DO UPDATE SET
-       label            = excluded.label,
-       duration_min     = excluded.duration_min,
-       default_capacity = excluded.default_capacity,
-       max_capacity     = excluded.max_capacity,
-       min_players      = excluded.min_players`,
+     ON CONFLICT(game_id, event_type) DO NOTHING`,
   )
 
   db.transaction(() => {
     for (const game of GAMES) {
-      upsertGame.run({ id: game.id, name: game.name })
+      insertGame.run({ id: game.id, name: game.name })
       for (const config of game.eventTypes) {
-        upsertConfig.run({ gameId: game.id, ...config })
+        insertConfig.run({ gameId: game.id, ...config })
       }
     }
   })()
