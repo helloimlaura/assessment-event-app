@@ -83,6 +83,12 @@ Used for implementation speed, not decision making. Plans came from chats in the
 - Already (in planning stage, not yet implemented) this resulted in Claude helpfully filling in the README with all sorts of stories about our "process" that would have fit the requirements of the assessment instructions but were entirely fabricated.
 I realized I got better outcomes when the reasoning resulted in a plan and Claude Code was given the plan, isolated from the reasoning context.
 
+VS Code - GPT-5.6 Sol
 
 
+// - **Design write-up (~1 page)** answering:
+     - How did you determine and enforce how many people can attend an event? Where does capacity live, and what happens under concurrent registrations for the last seat?
+     - How does your template system work, and what would adding a 4th game (or a non-card game) require?
+     - What did you deliberately cut or fake to stay in the timebox, and what would you build next?
+   - **AI usage note (a few sentences):** which tools you used and for what, and one example of AI output you rejected or had to fix.
 
