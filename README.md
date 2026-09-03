@@ -28,6 +28,7 @@ npm run dev
 | `/calendar` | The schedule, grouped by local day. `/` redirects here. |
 | `/events/new` | Create an event. The game select drives the event type, which drives duration and the capacity default and range. |
 | `/events/:id` | One event: when and where, seats taken, the `.ics` download, the registration QR code, and who has registered. Reached by clicking any card on the schedule. |
+| `/events/:id/register` | The registration form a scanned QR code lands on. A name is the only field. Reached by scanning, or by the link on the event page. |
 
 Each side can also be run on its own:
 
@@ -79,6 +80,83 @@ const ok = take.run(id).changes === 1;
 ```
 
 This survives restarts, and because better-sqlite3 is synchronous it has the same "no interleaving" property as the Map. Multiple Node processes on the same file also stay correct (SQLite serializes writers), so it survives moving to cluster. Migrating to Postgres later is a near-verbatim SQL change.
+
+
+### As built
+
+**Concurrent registrations for the last seat.** Registration never does a
+read-then-write. The seat is claimed by a single conditional statement, whose
+`WHERE` clause is evaluated by the same statement that performs the increment:
+
+```sql
+UPDATE events
+   SET confirmed_count = confirmed_count + 1
+ WHERE id = ? AND confirmed_count < capacity
+RETURNING id, name, confirmed_count AS registeredCount, capacity
+```
+
+`RETURNING` means the count the player is shown is the count that was written,
+not a re-read that another request could already have moved on.
+
+**Order, and what a rollback is for.** The seat is claimed first by that
+UPDATE, and only then is the registration row inserted. A uniqueness violation
+on the insert throws, which rolls back the increment, so a duplicate attempt
+never consumes a seat. Refusals are raised as exceptions for exactly this
+reason: better-sqlite3 commits a transaction when its function returns and
+rolls back when it throws, so throwing is what undoes the half-done work. Only
+a claimed seat takes the return path.
+
+**Serialized at the lock, not at the row.** The transaction is opened with
+`BEGIN IMMEDIATE`. A deferred transaction starts as a reader and has to upgrade
+to a writer, which under contention is where `SQLITE_BUSY` comes from; taking
+the write lock up front means two racing registrations queue at the lock rather
+than discovering each other at the row. The second one then reads the first's
+committed count, matches no rows, and is refused.
+
+**The one SELECT.** A zero-row UPDATE is ambiguous — the event is full, or
+there is no such event — and those are different answers to the player (409 and
+404). A single `SELECT 1 FROM events WHERE id = ?` distinguishes them. It runs
+only on the refusal path, after the write has already failed, so it has nothing
+to race.
+
+**Duplicates.** `UNIQUE (event_id, player_key)` on `registrations`, where
+`player_key` is `lower(trim(player_name))`, computed in the application. Matching
+is therefore case- and whitespace-insensitive: "Nissa Revane", "nissa revane"
+and `"  Nissa Revane  "` are one player. `player_name` keeps the capitalization
+the player typed, because the roster shows it. The refusal is
+`409 DUPLICATE_REGISTRATION`.
+
+**Second line of defence.** `CHECK (confirmed_count >= 0 AND confirmed_count <=
+capacity)` on `events`. If the application logic ever regressed, an
+over-capacity increment would fail at the database rather than oversell.
+
+**What the API exposes.** Event responses carry `capacity`, `registeredCount`
+(mapped from `confirmed_count`) and `isFull` (`registeredCount >= capacity`).
+The client uses these for display only; it never decides whether a registration
+is allowed. `capacityContention.test.ts` proves it by racing bare `fetch` calls
+with no UI in the loop.
+
+**Seeing it happen.**
+
+```
+npm --prefix server run test:capacity
+```
+
+Starts the real app over an in-memory database on an ephemeral port and fires
+four stampedes at it over real HTTP — 40 players for 8 seats, 25 for a single
+remaining seat, 75 for 30, and one impatient player double-clicking ten times.
+It prints seats sold against seats expected, and the seat counter against the
+roster length: those two are separate records of the same fact and can only
+disagree if a transaction committed half of itself.
+
+**What the player sees.** The registration form treats a lost race as a state
+to render, not an edge case. A claimed seat and a full event are both terminal,
+so the form is replaced by a panel — "You're in, <name>. Seat 8 of 8." or
+"Sorry — this event is full. That was the last seat, and it went while you were
+filling this in." A duplicate name, a blank name or an unreachable server leave
+something worth another try, so the form stays and the message sits above it.
+Focus follows: onto the outcome heading when there is nothing left to do, back
+into the input when there is.
 
 ## No! Bad AI!
 

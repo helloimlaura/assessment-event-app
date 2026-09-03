@@ -55,10 +55,14 @@ Registration is **capacity-enforced on the server**, not just the UI — once fu
 further registrations are rejected with a clear message.
 - [x] RED — `server/src/tests/registration.test.ts`
 - [x] RED — `server/src/tests/capacityContention.test.ts` (last-seat race)
-- [ ] GREEN — registration endpoint + atomic conditional insert
+- [x] GREEN — `POST /api/events/:id/registrations`, claimed by one conditional
+      `UPDATE … RETURNING` inside a `BEGIN IMMEDIATE` transaction
+      (`server/src/domain/registrations.ts`)
 - [x] GREEN — client QR: `RegistrationQr` mounted on the event page, encoding
       the server's `registrationUrl`
-- [ ] GREEN — client registration form (the page the QR points at)
+- [x] GREEN — client registration form at `/events/:id/register`:
+      `RegisterPage` + `RegistrationForm`, with a rendered outcome for each
+      answer the server can give
 
 ## Do NOT build (out of scope)
 
@@ -73,11 +77,14 @@ concern:
 ## Deliberate cuts
 
 - **No client-side tests.** The client has no test runner, and adding vitest +
-  Testing Library would cost more of the timebox than the one form is worth.
-  The form holds no rules of its own — capacity ranges and event-type
-  availability come from `/api/games`, and the submit path is validated by the
-  server, which `eventCreation.test.ts` covers over HTTP. The form is checked
-  by hand against `npm run dev`.
+  Testing Library would cost more of the timebox than the two forms are worth.
+  Neither form holds rules of its own — capacity ranges and event-type
+  availability come from `/api/games`, capacity enforcement is the server's,
+  and both submit paths are validated server-side, which `eventCreation.test.ts`
+  and `registration.test.ts` cover over HTTP. The forms are checked by hand
+  against `npm run dev`; the registration form's six outcomes were additionally
+  driven in a real Chrome session, including a genuine lost race (load the page
+  with one seat left, let another request take it, then submit).
 
 ## Test infrastructure
 - [x] Node built-in test runner via existing `tsx` (zero new dependencies)
@@ -105,7 +112,45 @@ exist yet.
 Per-file leaf counts: gameTemplates 12, eventCreation 20, calendar 12,
 icsExport 15, registration 17, capacityContention 6.
 
-## Current status (2026-09-03, after GREEN step 6 + the event page)
+## Current status (2026-09-03, after GREEN step 7 + the registration form)
+
+83 tests. 83 pass, 0 fail.
+
+Requirement 5 is green. `registration.test.ts` (17) and
+`capacityContention.test.ts` (6) came green together with one endpoint, since
+they describe one path: `POST /api/events/:id/registrations`.
+
+The seat is claimed by a single `UPDATE … WHERE confirmed_count < capacity …
+RETURNING`, so no read precedes the write and the returned count is the one
+that was written. The insert follows inside the same `BEGIN IMMEDIATE`
+transaction; a `UNIQUE (event_id, player_key)` violation throws, which rolls
+the increment back, so a duplicate never costs a seat. Refusals are thrown
+rather than returned for that reason — better-sqlite3 rolls back on throw and
+commits on return. The only SELECT is on the refusal path, telling a full event
+(409) apart from a missing one (404).
+
+The client gained `/events/:id/register`, the route the QR code has been
+encoding since the event page landed. `useEventDetail` was pulled out of
+`EventPage` so both routes share one loader rather than two copies of the same
+fetch and stale-response guard.
+
+Outcomes are split by whether anything is left to try. A claimed seat and a
+full event are terminal, so the form is replaced by a panel; a duplicate name,
+a blank name and an unreachable server keep the form. Focus moves with the
+answer — onto the outcome heading when the page is done, back into the input
+when it is not — because disabling the submit button drops focus to the body
+and a terminal panel unmounts the form from under it.
+
+`server/src/scripts/capacity-test.ts` now exists; `npm --prefix server run
+test:capacity` had been pointing at a missing file. It fires four stampedes
+over real HTTP and prints seats sold against seats expected, and the seat
+counter against the roster length.
+
+Verified beyond the suite: 30 concurrent `curl` processes against the
+file-backed WAL database sold exactly the 7 remaining seats of 8, refused 23,
+and left the counter and roster both reading 8.
+
+## Earlier status (2026-09-03, after GREEN step 6 + the event page)
 
 83 tests. 67 pass, 11 fail, 5 cancelled.
 
@@ -148,5 +193,5 @@ every other assertion in that test is written.
 5. `GET /api/events?from&to` + `groupEventsByDay` — requirement 3.
 6. `GET /api/events/:id/calendar.ics` — requirement 4.
 7. `POST /api/events/:id/registrations` with the atomic conditional insert —
-   requirement 5 and `capacityContention.test.ts`.
-8. Client: calendar view, QR on the event page, registration form.
+   requirement 5 and `capacityContention.test.ts`. **Done.**
+8. Client: calendar view, QR on the event page, registration form. **Done.**
