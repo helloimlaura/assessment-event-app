@@ -1,3 +1,9 @@
+/** The kind of event being run. The assignment calls these "play formats";
+ *  this codebase always calls them **event types**, because "format" on its own
+ *  means deck-building format (Modern, Core Constructed, Expanded) — a separate,
+ *  out-of-scope concept. Which event types a game offers, and the duration,
+ *  capacity and minimum-player rules each one implies, come from that game's
+ *  template. See EventTypeOption. */
 export type EventType = 'DRAFT' | 'SEALED' | 'CONSTRUCTED' | 'COMMANDER'
 
 export type ErrorCode =
