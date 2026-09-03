@@ -161,6 +161,59 @@ export function validateCreateEvent(
   }
 }
 
+/** A calendar window. Both ends are optional: no window at all means the whole
+ *  schedule, which is what the agenda asks for when it wants everything from
+ *  now on and has no far end in mind. */
+export interface EventWindow {
+  from?: string   // UTC ISO, inclusive
+  to?: string     // UTC ISO, exclusive
+}
+
+export type WindowResult =
+  | { ok: true; value: EventWindow }
+  | { ok: false; code: ErrorCode; message: string; fields?: Record<string, string> }
+
+/** Both bounds are normalized to UTC ISO for the same reason `startsAt` is on
+ *  the way in: `starts_at` is compared as text in SQL, so "…T12:00:00Z" and
+ *  the stored "…T12:00:00.000Z" have to be spelled the same way before `>=`
+ *  can mean what it says. */
+function readBound(
+  fields: Record<string, string>,
+  key: 'from' | 'to',
+  value: unknown,
+  label: string,
+): string | undefined {
+  if (value === undefined) return undefined
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    fields[key] = `${label} must be a date and time.`
+    return undefined
+  }
+  if (Number.isNaN(Date.parse(value))) {
+    fields[key] = `${label} could not be read as a date.`
+    return undefined
+  }
+  return new Date(Date.parse(value)).toISOString()
+}
+
+/** A window the server cannot read is refused rather than quietly dropped:
+ *  silently ignoring `?from=whenever` would answer a question the organizer
+ *  did not ask, with a list covering dates they never requested. 422 for the
+ *  same reason an unparseable `startsAt` in a body is 422 — the query string
+ *  parsed fine, the value in it is what the domain refuses. */
+export function validateEventWindow(query: Record<string, unknown>): WindowResult {
+  const fields: Record<string, string> = {}
+
+  const from = readBound(fields, 'from', query.from, 'Window start')
+  const to = readBound(fields, 'to', query.to, 'Window end')
+
+  if (Object.keys(fields).length > 0) {
+    return { ok: false, code: 'VALIDATION_FAILED', message: 'Some fields need fixing.', fields }
+  }
+
+  return { ok: true, value: { ...(from ? { from } : {}), ...(to ? { to } : {}) } }
+}
+
 /** One row of the events table already joined to the game name and the event
  *  type's label, which are the only two display strings an event does not
  *  carry itself. */
@@ -229,6 +282,7 @@ function toSummary(row: EventRow): EventSummary {
  *  handle; the route holds one of these instead of any SQL of its own. */
 export interface EventStore {
   create: (event: NormalizedEvent) => EventSummary
+  list: (window: EventWindow) => EventSummary[]
   findSummary: (id: string) => EventSummary | undefined
   findDetail: (id: string) => EventDetail | undefined
 }
@@ -246,6 +300,14 @@ export function createEventStore(db: Db, publicBaseUrl: string): EventStore {
         @minPlayers, @location, 0, @createdAt)`,
   )
   const selectById = db.prepare(`${SELECT_EVENT}\n  WHERE e.id = ?`)
+  /** One statement rather than one per shape of window: a NULL bound matches
+   *  everything, so an open end costs no extra SQL and no string building. */
+  const selectInWindow = db.prepare(
+    `${SELECT_EVENT}
+  WHERE (@from IS NULL OR e.starts_at >= @from)
+    AND (@to   IS NULL OR e.starts_at <  @to)
+  ORDER BY e.starts_at, e.rowid`,
+  )
   const selectRegistrations = db.prepare(
     `SELECT player_name AS playerName, created_at AS registeredAt
      FROM registrations
@@ -264,6 +326,12 @@ export function createEventStore(db: Db, publicBaseUrl: string): EventStore {
       // the one the organizer is shown, joins and defaults included.
       return toSummary(rowById(id)!)
     },
+
+    list: (window) =>
+      (selectInWindow.all({
+        from: window.from ?? null,
+        to: window.to ?? null,
+      }) as EventRow[]).map(toSummary),
 
     findSummary: (id) => {
       const row = rowById(id)

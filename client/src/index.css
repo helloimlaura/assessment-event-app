@@ -3,3 +3,16 @@ body {
   padding: 2rem;
   font-family: system-ui, sans-serif;
 }
+
+/* Form and schedule side by side where there is room, stacked where there is
+   not. No breakpoint: the columns themselves decide when they no longer fit. */
+.app {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  align-items: start;
+}
+
+.app h1 {
+  grid-column: 1 / -1;
+}
