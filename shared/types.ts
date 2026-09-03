@@ -4,7 +4,8 @@
  *  out-of-scope concept. Which event types a game offers, and the duration,
  *  capacity and minimum-player rules each one implies, come from that game's
  *  template. See EventTypeOption. */
-export type EventType = 'DRAFT' | 'SEALED' | 'CONSTRUCTED' | 'COMMANDER'
+export type EventType =
+  | 'DRAFT' | 'SEALED' | 'CONSTRUCTED' | 'COMMANDER' | 'PRERELEASE'
 
 export type ErrorCode =
   | 'VALIDATION_FAILED' | 'NOT_FOUND' | 'EVENT_FULL'
