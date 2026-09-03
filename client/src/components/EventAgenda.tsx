@@ -5,12 +5,6 @@ import type { CalendarDay } from '../../../shared/calendar'
 import type { EventSummary } from '../../../shared/types'
 import './EventAgenda.css'
 
-export interface EventAgendaProps {
-  /** Changed by the caller when the schedule may have moved on — creating an
-   *  event bumps it — which is what makes the list refetch. */
-  refreshKey?: number
-}
-
 /** The zone the organizer is standing in. Which day an event belongs to is a
  *  local question, so this is the answer the grouping and every rendered time
  *  are given. */
@@ -42,7 +36,7 @@ function startOfToday(): string {
   return midnight.toISOString()
 }
 
-export function EventAgenda({ refreshKey }: EventAgendaProps) {
+export function EventAgenda() {
   const [days, setDays] = useState<CalendarDay[]>([])
   const [status, setStatus] = useState('Loading the schedule…')
 
@@ -67,7 +61,10 @@ export function EventAgenda({ refreshKey }: EventAgendaProps) {
     return () => {
       current = false
     }
-  }, [refreshKey])
+    // No dependencies: the agenda is its own route, so navigating to it
+    // mounts a fresh copy and this refetches. Nothing has to tell it that a
+    // new event was created elsewhere.
+  }, [])
 
   return (
     <section className="agenda" aria-labelledby="agenda-heading">

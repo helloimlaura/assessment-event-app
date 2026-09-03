@@ -19,7 +19,14 @@ npm run install:all
 npm run dev
 ```
 
-`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Then open http://localhost:5173 — it should list the game templates fetched from `/api/games`.
+`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Then open http://localhost:5173, which redirects to the schedule.
+
+## Pages
+
+| URL | What it is |
+|---|---|
+| `/calendar` | The schedule, grouped by local day. `/` redirects here. |
+| `/events/new` | Create an event. The game select drives the event type, which drives duration and the capacity default and range. |
 
 Each side can also be run on its own:
 
@@ -28,27 +35,6 @@ npm --prefix server run dev
 npm --prefix client run dev
 ```
 
-## API errors
-
-Every error response is `{ "error": { "code", "message", "fields"? } }`. The
-status for each code lives in `ERROR_STATUS` in `shared/types.ts`, which the
-routes and the tests both read, so the server, the suite and this table cannot
-drift apart.
-
-| Status | Code | When |
-|---|---|---|
-| 400 | `MALFORMED_BODY` | The request could not be parsed at all — a body that is not JSON. |
-| 422 | `VALIDATION_FAILED` | Parsed, but a field is wrong: blank name, unparseable start time, capacity outside the template's range, unknown `gameId`. The offending fields are named in `fields`. |
-| 422 | `UNSUPPORTED_EVENT_TYPE` | The game does not run that event type — a Commander pod for Pokémon. |
-| 404 | `NOT_FOUND` | No event with that id, or no such endpoint. |
-| 409 | `EVENT_FULL` | The last seat went to someone else first. |
-| 409 | `DUPLICATE_REGISTRATION` | That player is already registered for this event. |
-| 500 | `INTERNAL` | A bug on our side. |
-
-The 400/422 split is the one worth stating outright: **400 means the request
-was not understood, 422 means it was understood and refused.** A Pokémon
-Commander event is well-formed JSON asking for something the rules do not
-allow, so it answers 422. Only an unparseable body gets 400.
 ## Notes on Ordering and Decisions
 
 With a 3 hour timebox, the priority is getting end-to-end flow implemented and absolutely nailing the "last spot" problem.
@@ -104,9 +90,20 @@ Claude Code - Opus 5
 Used for implementation speed, not decision making. Plans came from chats in the Web UI. 
 - Already (in planning stage, not yet implemented) this resulted in Claude helpfully filling in the README with all sorts of stories about our "process" that would have fit the requirements of the assessment instructions but were entirely fabricated.
 I realized I got better outcomes when the reasoning resulted in a plan and Claude Code was given the plan, isolated from the reasoning context.
+- The most egregious add was that Claude Code added an entirely separate event registry that had to be kept in sync with the db. 
 
-VS Code - GPT-5.6 Sol
+## What Next
+Events
+ - Description
+ - Image
 
+ Registration
+ - a unique identifier that requires verification (email, sms) to dedupe players instead of the string match
+ - cost / payment
+
+Other
+- new locations and map with filters including Format
+ 
 
 // - **Design write-up (~1 page)** answering:
      - How did you determine and enforce how many people can attend an event? Where does capacity live, and what happens under concurrent registrations for the last seat?
