@@ -1,18 +1,9 @@
-import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
-import type { EventDetail } from '../../../shared/types'
 import { RegistrationQr } from '../components/RegistrationQr'
 import { formatClock, formatEventDate } from '../lib/datetime'
+import { useEventDetail } from '../lib/useEventDetail'
 import './EventPage.css'
-
-/** One value rather than a boolean pair, which would allow "loading and
- *  errored at once" — not a state this page has. */
-type Load =
-  | { kind: 'loading' }
-  | { kind: 'missing' }
-  | { kind: 'failed' }
-  | { kind: 'loaded'; event: EventDetail }
 
 /** The event an organizer runs the shop from: when and where it fires, seats
  *  taken, the invite to hand out, the QR players scan, and who has registered.
@@ -29,33 +20,7 @@ export function EventPage() {
 }
 
 function EventView({ id }: { id: string }) {
-  const [load, setLoad] = useState<Load>({ kind: 'loading' })
-
-  useEffect(() => {
-    let current = true
-
-    fetch(`/api/events/${encodeURIComponent(id)}`)
-      .then(async (res) => {
-        // A mistyped id and a server that fell over get different words: one
-        // message for both would send an organizer hunting a bug that is a typo.
-        if (res.status === 404) return { kind: 'missing' } as const
-        if (!res.ok) throw new Error(String(res.status))
-
-        const { event } = (await res.json()) as { event: EventDetail }
-        return { kind: 'loaded', event } as const
-      })
-      .then((next) => {
-        // A refetch that lands after a newer one must not overwrite it.
-        if (current) setLoad(next)
-      })
-      .catch(() => {
-        if (current) setLoad({ kind: 'failed' })
-      })
-
-    return () => {
-      current = false
-    }
-  }, [id])
+  const load = useEventDetail(id)
 
   if (load.kind === 'loading') return <p aria-live="polite">Loading the event…</p>
   if (load.kind === 'missing') return <p aria-live="polite">That event does not exist.</p>

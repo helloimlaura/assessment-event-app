@@ -1,0 +1,115 @@
+.register {
+  display: grid;
+  gap: 1.5rem;
+  max-inline-size: 32rem;
+}
+
+.register__header {
+  padding-block-end: 0.25rem;
+  border-block-end: 2px solid currentColor;
+}
+
+.register__heading {
+  margin: 0;
+}
+
+.register__when,
+.register__seats {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+.register__seats {
+  font-variant-numeric: tabular-nums;
+}
+
+.register__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.register__field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.register__field label {
+  font-weight: 700;
+}
+
+.register__field input {
+  font: inherit;
+  padding: 0.4rem;
+}
+
+.register__field input:focus-visible,
+.register__submit:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+.register__field [aria-invalid='true'] {
+  border: 2px solid #b3261e;
+}
+
+/* Never colour alone: the input also gets a border and the message is text, so
+   the error survives a monochrome or high-contrast display. */
+.register__error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 700;
+}
+
+/* Tall enough to tap: this is the one control on a page reached by phone. */
+.register__submit {
+  font: inherit;
+  justify-self: start;
+  min-block-size: 44px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 700;
+}
+
+.register__outcome {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+/* The two terminal outcomes are opposites and must not be mistaken for each
+   other at a glance. The border weight carries it without relying on colour:
+   the refusal is the heavier box. */
+.register__outcome--full {
+  border-width: 4px;
+}
+
+.register__outcome-heading {
+  margin: 0;
+}
+
+.register__outcome-detail,
+.register__outcome-seat {
+  margin: 0;
+}
+
+.register__outcome-seat {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.register__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The panels take focus when they replace the form, so the ring has to be
+   visible on a heading that is not otherwise interactive. */
+.register__outcome-heading:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
