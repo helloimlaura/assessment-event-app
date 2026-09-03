@@ -142,6 +142,11 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
             id={ids.name}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            // `aria-required`, not `required`: the server is the authority on
+            // what is valid, and a browser that refuses the submit first would
+            // let the two disagree. This states the fact without taking the
+            // check away — the same reason the form carries `noValidate`.
+            aria-required="true"
             aria-invalid={fieldErrors.name !== undefined}
             aria-describedby={errorId('name')}
           />
@@ -196,6 +201,7 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
             type="datetime-local"
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
+            aria-required="true"
             aria-invalid={fieldErrors.startsAt !== undefined}
             aria-describedby={errorId('startsAt')}
           />
