@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import type BetterSqlite3 from 'better-sqlite3'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import { seedDemoEvents, seedGameTemplates } from './seed'
@@ -9,10 +9,32 @@ export type Db = BetterSqlite3.Database
 
 const SCHEMA_PATH = join(__dirname, 'schema.sql')
 
+/** The `server` package directory, found by walking up from this module to the
+ *  nearest `package.json`.
+ *
+ *  A path relative to `__dirname` cannot serve both layouts: `tsc` emits with
+ *  `rootDir: '..'`, so this file is `src/db/` under tsx but `dist/server/src/db/`
+ *  once built, two different depths from the package root. The old
+ *  `../../data/app.db` was correct for the first and silently wrong for the
+ *  second — it put the live database inside `dist/`, which meant `npm start`
+ *  and `npm run dev` used different files and any clean rebuild deleted the
+ *  built one. Anchoring on `package.json` is the same answer from either. */
+function packageRoot(): string {
+  let dir = __dirname
+  while (!existsSync(join(dir, 'package.json'))) {
+    const parent = dirname(dir)
+    if (parent === dir) {
+      throw new Error(`could not locate the server package root above ${__dirname}`)
+    }
+    dir = parent
+  }
+  return dir
+}
+
 /** Where the application's own database file lives. `DB_PATH` overrides it
  *  for a deployment that keeps state somewhere else. Tests do not go through
  *  this: they call `openDatabase(':memory:')` directly. */
-export const DEFAULT_DB_PATH = process.env.DB_PATH ?? join(__dirname, '../../data/app.db')
+export const DEFAULT_DB_PATH = process.env.DB_PATH ?? join(packageRoot(), 'data', 'app.db')
 
 const IN_MEMORY = ':memory:'
 
