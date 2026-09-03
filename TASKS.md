@@ -18,7 +18,10 @@ with a rules-set filter, so code, tests and test names all say event type.
 An organizer can create an event with at minimum: name, game type, date + start
 time, and player capacity. Capacity must support up to **30 players**.
 - [x] RED — `server/src/tests/eventCreation.test.ts`
-- [ ] GREEN — event create/read endpoints + validation
+- [x] GREEN — `server/src/domain/events.ts` validation + store, `POST /api/events`
+      and `GET /api/events/:id` in `app.ts`
+- [x] GREEN — client `CreateEventForm`: game select drives event type, which
+      drives duration, capacity default and range
 
 ### 2. Game types & templates
 At least **3** trading card games, one of which is **Magic: The Gathering**
@@ -64,13 +67,22 @@ concern:
 - [ ] no editing or cancelling events
 - [ ] no admin dashboards
 
+## Deliberate cuts
+
+- **No client-side tests.** The client has no test runner, and adding vitest +
+  Testing Library would cost more of the timebox than the one form is worth.
+  The form holds no rules of its own — capacity ranges and event-type
+  availability come from `/api/games`, and the submit path is validated by the
+  server, which `eventCreation.test.ts` covers over HTTP. The form is checked
+  by hand against `npm run dev`.
+
 ## Test infrastructure
 - [x] Node built-in test runner via existing `tsx` (zero new dependencies)
 - [x] `server/src/tests/helpers.ts` — in-memory SQLite + ephemeral-port app per suite
 - [x] `npm test` wired at repo root and in `server/package.json`
 - [x] `server/src/tests/all.ts` barrel (Node 20 does not discover `.ts` in a dir)
 
-## Current RED baseline (2026-09-02)
+## Starting RED baseline (2026-09-02)
 
 82 tests. 0 pass, 82 fail.
 
@@ -89,6 +101,21 @@ exist yet.
 
 Per-file leaf counts: gameTemplates 12, eventCreation 20, calendar 12,
 icsExport 15, registration 17, capacityContention 6.
+
+## Current status (2026-09-02, after GREEN steps 1-4)
+
+83 tests. 41 pass, 37 fail, 5 cancelled.
+
+Green: game templates, adding a fourth game, creating an event, rejecting bad
+event input, the registration link a QR code encodes. The remaining reds are
+requirements 3, 4 and 5, which have no implementation yet.
+
+One test was corrected rather than implemented against: `eventCreation.test.ts`
+asserted `capacity === 16` for the shared `VALID_EVENT` fixture, whose capacity
+is 8 because mtg/DRAFT is a single booster pod capped at 8. The literal
+contradicted the fixture and the sibling test that asserts the same template
+cap, so it could never pass; it now reads `VALID_EVENT.capacity`, matching how
+every other assertion in that test is written.
 
 ## GREEN order (each step should turn a known set of reds green)
 

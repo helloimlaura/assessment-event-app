@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { GameTemplate } from '../../shared/types'
+import { CreateEventForm } from './components/CreateEventForm'
 
 function App() {
   const [games, setGames] = useState<GameTemplate[]>([])
@@ -22,21 +23,9 @@ function App() {
       {status !== '' ? (
         <p>{status}</p>
       ) : (
-        <ul>
-          {games.map((game) => (
-            <li key={game.id}>
-              {game.name}
-              <ul>
-                {game.eventTypes.map((option) => (
-                  <li key={option.eventType}>
-                    {option.label} — {option.durationMin} min, up to{' '}
-                    {option.maxCapacity} players
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+        // Mounted only once games have arrived, so the selects are never empty
+        // and the form always has a template to read defaults from.
+        <CreateEventForm games={games} />
       )}
     </main>
   )
