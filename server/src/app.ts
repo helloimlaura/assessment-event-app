@@ -4,6 +4,7 @@ import type { Express, NextFunction, Request, Response } from 'express'
 import { ERROR_STATUS } from '../../shared/types'
 import type { ApiError, ErrorCode } from '../../shared/types'
 import type { Db } from './db'
+import { createEventStore, validateCreateEvent } from './domain/events'
 import { createTemplateRegistry } from './domain/gameTemplates'
 
 export interface AppDeps {
@@ -24,11 +25,12 @@ function fail(
   res.status(ERROR_STATUS[code]).json(body)
 }
 
-/** TODO(green): mount /api/events and registrations. */
+/** TODO(green): mount registrations. */
 export function createApp(deps: AppDeps): Express {
   /** All game membership and rules come from the same database that stores
    *  events. There is no second, code-owned template list to keep in sync. */
   const templates = createTemplateRegistry(deps.db)
+  const events = createEventStore(deps.db, deps.publicBaseUrl)
 
   const app = express()
   app.use(express.json())
@@ -39,6 +41,31 @@ export function createApp(deps: AppDeps): Express {
    *  visible without changing this route or restarting the process. */
   app.get('/api/games', (_req, res) => {
     res.json({ games: templates.list() })
+  })
+
+  /** Requirement 1: create an event. The template, not the request body,
+   *  decides duration and minimum players, and supplies the capacity when the
+   *  organizer leaves it blank. */
+  app.post('/api/events', (req, res) => {
+    const parsed = validateCreateEvent(req.body, templates)
+    if (!parsed.ok) {
+      fail(res, parsed.code, parsed.message, parsed.fields)
+      return
+    }
+
+    res.status(201).json({ event: events.create(parsed.value) })
+  })
+
+  /** Requirement 1: read one back. This is also the event page the
+   *  registration link and QR code point at. */
+  app.get('/api/events/:id', (req, res) => {
+    const event = events.findDetail(req.params.id)
+    if (event === undefined) {
+      fail(res, 'NOT_FOUND', 'No event with that id.')
+      return
+    }
+
+    res.json({ event })
   })
 
   // Anything else under /api is a missing endpoint rather than a client-side

@@ -1,0 +1,76 @@
+.create-event {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 32rem;
+}
+
+.create-event__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.create-event__field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.create-event__field label {
+  font-weight: 700;
+}
+
+.create-event__field input,
+.create-event__field select {
+  font: inherit;
+  padding: 0.4rem;
+}
+
+.create-event__field :is(input, select):focus-visible,
+.create-event__submit:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+.create-event__field [aria-invalid='true'] {
+  border: 2px solid #b3261e;
+}
+
+.create-event__optional {
+  font-weight: 400;
+}
+
+.create-event__hint {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Never colour alone: invalid inputs also get a border, and the message is
+   text, so the error survives a monochrome or high-contrast display. */
+.create-event__error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 700;
+}
+
+.create-event__submit {
+  font: inherit;
+  justify-self: start;
+  padding: 0.5rem 1rem;
+}
+
+.create-event__created {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid currentColor;
+}
+
+.create-event__created dt {
+  font-weight: 700;
+}
+
+.create-event__created dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

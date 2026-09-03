@@ -32,7 +32,7 @@ describe('creating an event', () => {
     assert.equal(event.game.id, 'mtg')
     assert.equal(event.eventType, 'DRAFT')
     assert.equal(event.location, VALID_EVENT.location)
-    assert.equal(event.capacity, 16)
+    assert.equal(event.capacity, VALID_EVENT.capacity)
     assert.equal(Date.parse(event.startsAt), Date.parse(VALID_EVENT.startsAt))
   })
 
