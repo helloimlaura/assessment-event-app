@@ -1,5 +1,6 @@
 # wotc-event-app
-Take home assessment for Full Stack Senior Software Engineer II
+
+Take-home assessment for Senior Full Stack Engineer II.
 
 ## Structure
 
@@ -19,7 +20,19 @@ npm run install:all
 npm run dev
 ```
 
-`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Then open http://localhost:5173, which redirects to the schedule.
+`npm run dev` starts both processes with prefixed, interleaved logs; Ctrl-C stops both. Open http://localhost:5173, which redirects to the schedule.
+
+The database seeds itself on first boot: opening it runs `schema.sql`, inserts the game templates (idempotently, on every open), and inserts six demo events if the `events` table is empty. One demo event is deliberately one seat from full.
+
+### Tests
+
+```
+npm test
+```
+
+83 tests across 11 suites on `node:test` via `tsx`. Each test opens its own `:memory:` database and never touches `server/data/app.db`. To watch: `npm --prefix server run test:watch`. To run one file: `npx tsx --test server/src/tests/gameTemplates.test.ts`.
+
+`npm --prefix server run test:capacity` is separate: a standalone script that fires concurrent registrations at a single remaining seat, so the last-seat outcome described below can be watched rather than taken on faith. It checks the result — seats sold, and the counter against the roster — not the mechanism; in one process the event loop is what serializes the writers, so the script does not exercise SQLite's lock.
 
 ## Pages
 
@@ -27,166 +40,95 @@ npm run dev
 |---|---|
 | `/calendar` | The schedule, grouped by local day. `/` redirects here. |
 | `/events/new` | Create an event. The game select drives the event type, which drives duration and the capacity default and range. |
-| `/events/:id` | One event: when and where, seats taken, the `.ics` download, the registration QR code, and who has registered. Reached by clicking any card on the schedule. |
-| `/events/:id/register` | The registration form a scanned QR code lands on. A name is the only field. Reached by scanning, or by the link on the event page. |
+| `/events/:id` | One event: when and where, seats taken, the `.ics` download, the registration QR code, and who has registered. |
+| `/events/:id/register` | The registration form a scanned QR code lands on. Name is the only field. |
 
-Each side can also be run on its own:
+The `.ics` file's `LOCATION` is the venue address entered on the create form and stored verbatim on the event row; there is no venues table.
 
-```
-npm --prefix server run dev
-npm --prefix client run dev
-```
+## Decisions
 
-## Notes on Ordering and Decisions
+**REST, not GraphQL.** The job description emphasizes GraphQL and I was tempted to use it, but this app has one client, one organizer, and about six endpoints. There is no over-fetching problem for GraphQL to solve, and the `.ics` download fits REST naturally. If the API had to serve a player-facing app, the organizer view, and store sites, I would switch to GraphQL so each client could take its own slice of the data without nested requests.
 
-With a 3 hour timebox, the priority is getting end-to-end flow implemented and absolutely nailing the "last spot" problem.
-Likely the choice with the biggest downriver effect is going to be how to make last spot claiming server-side authoritative.
-My preferred option is the atomic conditional update: update the db and then see if any rows were changed. It scales well and allows for a clean user experience. 
-See Last Ticket Contention section for the decision process.
-Having decided on better-sqlite3 as the library of choice, the next load-bearing decision s the API surface. The job description emphasizes GraphQL, so I am tempted to use it to show that I know how, but the app has one client, one organizer, and only about 6 endpoints. There's no over-fetching problem for GraphQL to solve here and I need to support an .ics download which fits more naturally with a REST API. I'll go with REST and design the db tables from the JSON shapes the endpoints need to return. If the assignment was to make an API that will support a user facing app and the organizer view, and store sites I would switch to GraphQL to better handle the different slices of the data without requiring multiple/nested requests.
-I'll need to pick my games. Mtg, Pokemon, and Lorcana. Two games with enough legacy to have to juggle multiple event types and formats, and then a newer game that includes championship level play even in a local game store. I think this will provide a representative list of problems to solve.
+**SQLite (better-sqlite3), not Postgres or in-memory.** An in-memory map has the fewest dependencies but needs hand-written atomicity and takes longer to debug. Postgres is the named production stack, but SQLite gives the same relational story — real constraints, a real transaction for the conditional update — while keeping the one-command start. It's synchronous, zero-config, and a single file.
 
+## Design write-up
 
-## Last Ticket Contention
+### Capacity: where it lives and how it's enforced
 
-The option I want to use: atomic conditional update, is based on the way a sql db naturally allows for synchronous check-and-decrement. If I want to stick with the MVP, an in-memory map is the least likely to introduce unforeseen dependencies or bloat. However, it's only correct if the check-and-decrement happens synchronously in a single tick, and we only run one Node process.
+**Source of truth.** Capacity is a per-event column, `events.capacity`, alongside `events.confirmed_count` (seats currently claimed). A CHECK constraint in `schema.sql` enforces `0 <= confirmed_count <= capacity <= 30`, so nothing above the database can put an event into an invalid state. Seats remaining are never stored; they are derived as `capacity - confirmed_count`.
 
-ts
-```
-const stock = new Map<string, number>();
+**How the number is chosen.** `event_type_configs` holds `default_capacity`, `max_capacity`, and `min_players` per (game, event type) pair. That pairing is load-bearing: the spec was ambiguous about whether the game alone should drive capacity, and I keyed it on the pair because an MTG Draft (8) and an MTG Commander pod (4) share a game but not a sensible capacity. On `POST /api/events` the server uses the organizer's `capacity` if provided, otherwise the template's default, then rejects unless `min_players <= capacity <= min(max_capacity, 30)`. The result is copied into `events.capacity`, so template edits affect future events only.
 
-function tryTake(id: string): boolean {
-  const qty = stock.get(id) ?? 0;
-  if (qty <= 0) return false;
-  stock.set(id, qty - 1);
-  return true;
-}
-```
+**Concurrent registrations for the last seat.** Registration never reads then writes. Inside a single `BEGIN IMMEDIATE` transaction:
 
-Node's single-threaded event loop makes this atomic as long as there's no await between the read and the write. The moment we insert an async call (validate user, log, etc.) between them, we've reintroduced the race. So we'd do the decrement first, then do async work, and increment back if something fails.
+1. `UPDATE events SET confirmed_count = confirmed_count + 1 WHERE id = ? AND confirmed_count < capacity` — one row changed means the seat is claimed; zero rows means refuse.
+2. `INSERT INTO registrations (...)` — a `UNIQUE(event_id, player_key)` violation (where `player_key = lower(trim(name))`, so duplicates are case- and whitespace-insensitive) throws, rolling back the increment from step 1. A duplicate attempt never consumes a seat.
 
-Limitations: state lost on restart, breaks with cluster mode / multiple instances / serverless.
+Two requests racing for the last seat cannot both succeed, and it is worth being precise about why, because two different mechanisms are doing the work.
 
-I think this is too flimsy for something so load-bearing to the app, so I'll look at the smallest real database.
+*Within this process*, better-sqlite3 is synchronous and the transaction body contains no `await`, so it runs to completion without yielding the event loop. Node serializes the two registrations before SQLite is ever asked to arbitrate: the second request's UPDATE runs against the first's committed count and matches no rows.
 
-Smallest real database: SQLite via better-sqlite3. Only slightly preferable to Postgres, but it keeps the one-command start. It's synchronous, zero-config, a single file, and the conditional update is exactly the pattern from before:
+*Against a second writer* — the `seed` script, a second instance, anything holding its own connection — the event loop guarantees nothing, and that is what `BEGIN IMMEDIATE` is for. It takes SQLite's write lock at `BEGIN` rather than upgrading from a reader mid-transaction, which is where `SQLITE_BUSY` comes from under contention. Deferred would be a latent bug the moment a second process appears.
 
-ts
-```
-const take = db.prepare(
-  "UPDATE items SET qty = qty - 1 WHERE id = ? AND qty > 0"
-);
-const ok = take.run(id).changes === 1;
-```
+The CHECK constraint is the last line: an over-capacity increment fails at the database even if both of the above were wrong.
 
-This survives restarts, and because better-sqlite3 is synchronous it has the same "no interleaving" property as the Map. Multiple Node processes on the same file also stay correct (SQLite serializes writers), so it survives moving to cluster. Migrating to Postgres later is a near-verbatim SQL change.
+The only SELECT is on the refusal path: after a zero-row UPDATE, `SELECT 1 FROM events WHERE id = ?` distinguishes a missing event (`404`) from a full one (`409 EVENT_FULL`). Nothing has been written at that point, so it cannot race anything. Duplicates return `409 DUPLICATE_REGISTRATION`.
 
+**What the API exposes.** Event responses include `capacity`, `registeredCount` (from `confirmed_count`), and `isFull`. The client uses these for display only; it never decides whether a registration is allowed.
 
-### As built
+### Template system
 
-**Concurrent registrations for the last seat.** Registration never does a
-read-then-write. The seat is claimed by a single conditional statement, whose
-`WHERE` clause is evaluated by the same statement that performs the increment:
+**How it works.** Game templates are database rows, not code. Two tables:
 
-```sql
-UPDATE events
-   SET confirmed_count = confirmed_count + 1
- WHERE id = ? AND confirmed_count < capacity
-RETURNING id, name, confirmed_count AS registeredCount, capacity
-```
+- `games` — one row per game (`id`, `name`)
+- `event_type_configs` — one row per (game, event type) pair: label, duration, default capacity, max capacity, minimum players
 
-`RETURNING` means the count the player is shown is the count that was written,
-not a re-read that another request could already have moved on.
+Magic has rows for Draft, Sealed, Constructed, and Commander. Pokémon has no Commander row. That absence is the whole rule: no config row, the game doesn't run that event type.
 
-**Order, and what a rollback is for.** The seat is claimed first by that
-UPDATE, and only then is the registration row inserted. A uniqueness violation
-on the insert throws, which rolls back the increment, so a duplicate attempt
-never consumes a seat. Refusals are raised as exceptions for exactly this
-reason: better-sqlite3 commits a transaction when its function returns and
-rolls back when it throws, so throwing is what undoes the half-done work. Only
-a claimed seat takes the return path.
+On event creation:
 
-**Serialized at the lock, not at the row.** The transaction is opened with
-`BEGIN IMMEDIATE`. A deferred transaction starts as a reader and has to upgrade
-to a writer, which under contention is where `SQLITE_BUSY` comes from; taking
-the write lock up front means two racing registrations queue at the lock rather
-than discovering each other at the row. The second one then reads the first's
-committed count, matches no rows, and is refused.
+1. Validation looks up the game, then the (game, event type) config. A missing game or config is a clear error. The config supplies the capacity default, floor, and ceiling.
+2. The template overrides the client. Duration and minimum players are never read from the request; they are copied from the config.
+3. The database enforces it too. `events` has a foreign key on `(game_id, event_type)` pointing at `event_type_configs`, so an unsupported combination can't be inserted even if validation had a bug. (This relies on `PRAGMA foreign_keys = ON`, which the connection sets.)
 
-**The one SELECT.** A zero-row UPDATE is ambiguous — the event is full, or
-there is no such event — and those are different answers to the player (409 and
-404). A single `SELECT 1 FROM events WHERE id = ?` distinguishes them. It runs
-only on the refusal path, after the write has already failed, so it has nothing
-to race.
+Duration, min players, and capacity are copied onto the event row at creation, so editing a template later doesn't change events already on the calendar. Only display strings (game name, event type label) are joined at read time.
 
-**Duplicates.** `UNIQUE (event_id, player_key)` on `registrations`, where
-`player_key` is `lower(trim(player_name))`, computed in the application. Matching
-is therefore case- and whitespace-insensitive: "Nissa Revane", "nissa revane"
-and `"  Nissa Revane  "` are one player. `player_name` keeps the capitalization
-the player typed, because the roster shows it. The refusal is
-`409 DUPLICATE_REGISTRATION`.
+`gameTemplates.ts` is the lookup layer (`list`, `get`, `eventTypeOption`); the event read query and the seed script also query these tables directly. There is no in-memory copy of the games — rows are read on each call, so a new game is visible as soon as it's inserted.
 
-**Second line of defence.** `CHECK (confirmed_count >= 0 AND confirmed_count <=
-capacity)` on `events`. If the application logic ever regressed, an
-over-capacity increment would fail at the database rather than oversell.
+The client renders entirely from `GET /api/games`: the game dropdown, the event type dropdown, and the "180 min · 8 seats" hint all come from the fetched configs.
 
-**What the API exposes.** Event responses carry `capacity`, `registeredCount`
-(mapped from `confirmed_count`) and `isFull` (`registeredCount >= capacity`).
-The client uses these for display only; it never decides whether a registration
-is allowed. `capacityContention.test.ts` proves it by racing bare `fetch` calls
-with no UI in the loop.
+**Adding a 4th trading card game.** Insert one `games` row and one or more `event_type_configs` rows. No code change, no restart. A test does exactly this: it inserts Star Wars: Unlimited, creates an event with it, and checks that duration and capacity come from the new rows. This holds because `EventType` is typed as `string` rather than a fixed union; I had it as a union initially and loosened it late.
 
-**Seeing it happen.**
+**Adding a non-card game.** Depends on whether it fits the schema's assumptions: one room, one block of time, N seats, one person per seat.
 
-```
-npm --prefix server run test:capacity
-```
+- *Rows only:* a board game night, a painting session with 6 spots. The label is free text; nothing assumes card-game vocabulary.
+- *One-line code changes:* capacity is capped at 30 (a CHECK on both tables plus a constant in `events.ts`), so a 200-seat launch party needs all three raised. Minimum players must be ≥ 2, so a solo activity is rejected.
+- *New columns or tables:*
+  - Team events (Two-Headed Giant, 3v3). Capacity is counted per person and registration is one row per name; teams need a party-size field or a `teams` table, plus a different registration flow.
+  - Multi-day or multi-session events. An event has exactly one start and one duration. This is the largest change — a `sessions` table — and it ripples into the `.ics` export and the calendar's day grouping. If this were a requirement I'd revisit the schema from the ground up.
+  - Waitlists. Capacity is one `confirmed_count` guarded by one conditional UPDATE; a waitlist changes that concurrency model rather than sitting beside it.
+  - Entry fees, age limits, equipment: just extra config columns.
 
-Starts the real app over an in-memory database on an ephemeral port and fires
-four stampedes at it over real HTTP — 40 players for 8 seats, 25 for a single
-remaining seat, 75 for 30, and one impatient player double-clicking ten times.
-It prints seats sold against seats expected, and the seat counter against the
-roster length: those two are separate records of the same fact and can only
-disagree if a transaction committed half of itself.
+### What was cut, and what I'd build next
 
-**What the player sees.** The registration form treats a lost race as a state
-to render, not an edge case. A claimed seat and a full event are both terminal,
-so the form is replaced by a panel — "You're in, <name>. Seat 8 of 8." or
-"Sorry — this event is full. That was the last seat, and it went while you were
-filling this in." A duplicate name, a blank name or an unreachable server leave
-something worth another try, so the form stays and the message sits above it.
-Focus follows: onto the outcome heading when there is nothing left to do, back
-into the input when there is.
+Deliberately not built:
 
-## No! Bad AI!
+- **Deck-building format** (Modern, Core Constructed, Expanded). See the AI section for why the proposed shape was rejected. It's a discovery/filter concern; nothing in creation, capacity, or registration depends on it, and the end-to-end flow is complete without it.
+- **Pod-size granularity.** Capacity is a flat headcount. Adding it is one column on `event_type_configs` and a multiple-of check in `validateCreateEvent`.
+- **Event description and image.**
+- **Verified player identity.** Dedupe is a normalized name match. Next would be an email or SMS-verified identifier.
+- **Cost / payment.**
+- **Search** with filters (format, map, distance).
 
-Claude Web UI (Projects) - Opus 5 & Fable 5.1
-Used because it allows me to store multiple contextually relevant files (like the job description and assessment instructions) without having to include them in my web app. Maintains a better trail of what I did than Claude Code. 
-- Deck-building Format (e.g. Modern, Core Constructed, Expanded) 
-Format is a discovery/filter concern: nothing in creation, capacity, or registration depends on it, and the end-to-end flow the spec asks for is complete without it. It could be added later as a nullable field on the event summary but making it a plain shared enum is a bad idea because of the namespace collision. MTG Standard, Pokémon Standard, and Lorcana Core Constructed are unrelated rule sets, so a global enum would either conflate them under one value or force a code edit per new game.
+## AI usage
 
-Claude Code - Opus 5
-Used for implementation speed, not decision making. Plans came from chats in the Web UI. 
-- Already (in planning stage, not yet implemented) this resulted in Claude helpfully filling in the README with all sorts of stories about our "process" that would have fit the requirements of the assessment instructions but were entirely fabricated.
-I realized I got better outcomes when the reasoning resulted in a plan and Claude Code was given the plan, isolated from the reasoning context.
-- The most egregious add was that Claude Code added an entirely separate event registry that had to be kept in sync with the db. 
+**Claude web UI (Projects), Opus 5 and Fable 5.1** — planning and design review. Projects let me keep the job description and assessment instructions as context without putting them in the repo, and leave a clearer trail than Claude Code.
 
-## What Next
-Events
- - Description
- - Image
+Rejected proposal: a global `Format` enum (`STANDARD`, `MODERN`, `EXPANDED`, …) shared across games. MTG Standard, Pokémon Standard, and Lorcana Core Constructed are unrelated rule sets, so one enum would either conflate them under a single value or force a code edit per new game — the opposite of what the template system is for. If format is added, it belongs as per-game data, not a shared vocabulary.
 
- Registration
- - a unique identifier that requires verification (email, sms) to dedupe players instead of the string match
- - cost / payment
+**Claude Code, Opus 5** — implementation, not decisions. Plans came from the web UI chats; I got better results handing Claude Code the finished plan in isolation from the reasoning that produced it.
 
-Other
-- new locations and map with filters including Format
- 
+Fixed output:
 
-// - **Design write-up (~1 page)** answering:
-     - How did you determine and enforce how many people can attend an event? Where does capacity live, and what happens under concurrent registrations for the last seat?
-     - How does your template system work, and what would adding a 4th game (or a non-card game) require?
-     - What did you deliberately cut or fake to stay in the timebox, and what would you build next?
-   - **AI usage note (a few sentences):** which tools you used and for what, and one example of AI output you rejected or had to fix.
-
+- At the planning stage it filled the README with fabricated "process" narrative that fit the assessment rubric but described nothing I had done. Removed.
+- It added a separate in-memory event registry that had to be kept in sync with the database, against the plan. Ripped out; the database is the only store.

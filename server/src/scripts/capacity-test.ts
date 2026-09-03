@@ -4,9 +4,16 @@
  *  `npm --prefix server run test:capacity`
  *
  *  Self-contained: it starts the real app over an in-memory database on an
- *  ephemeral port, so it needs no running server and touches no `app.db`. The
- *  requests are real HTTP, fired together, which is the only way to prove the
- *  claim — an in-process call would serialize itself and prove nothing.
+ *  ephemeral port, so it needs no running server and touches no `app.db`.
+ *
+ *  What this does and does not establish. The requests are real HTTP through
+ *  the real route, so what is checked is the outcome an actual client gets:
+ *  exactly the available seats are sold, and `confirmed_count` still agrees
+ *  with the roster. It does not exercise SQLite's write lock — better-sqlite3
+ *  is synchronous and the transaction body never yields, so inside one process
+ *  the event loop serializes these writers before the lock is contended.
+ *  `BEGIN IMMEDIATE` earns its place against a second connection, which this
+ *  single-process script cannot create.
  */
 import { createEvent, errorBody, getEventDetail, register, startTestServer } from '../tests/helpers'
 import type { TestServer } from '../tests/helpers'
