@@ -75,10 +75,14 @@ This survives restarts, and because better-sqlite3 is synchronous it has the sam
 
 Claude Web UI (Projects) - Opus 5 & Fable 5.1
 Used because it allows me to store multiple contextually relevant files (like the job description and assessment instructions) without having to include them in my web app. Maintains a better trail of what I did than Claude Code. 
+- Deck-building Format (e.g. Modern, Core Constructed, Expanded) 
+Format is a discovery/filter concern: nothing in creation, capacity, or registration depends on it, and the end-to-end flow the spec asks for is complete without it. It could be added later as a nullable field on the event summary but making it a plain shared enum is a bad idea because of the namespace collision. MTG Standard, Pokémon Standard, and Lorcana Core Constructed are unrelated rule sets, so a global enum would either conflate them under one value or force a code edit per new game.
 
 Claude Code - Opus 5
-Used for implementation speed, not decision making. Plans came from chats in the Web UI. Already (in planning stage, not yet implemented) this resulted in Claude helpfully filling in the README with all sorts of stories about our "process" that would have fit the requirements of the assessment instructions but were entirely fabricated.
+Used for implementation speed, not decision making. Plans came from chats in the Web UI. 
+- Already (in planning stage, not yet implemented) this resulted in Claude helpfully filling in the README with all sorts of stories about our "process" that would have fit the requirements of the assessment instructions but were entirely fabricated.
 I realized I got better outcomes when the reasoning resulted in a plan and Claude Code was given the plan, isolated from the reasoning context.
+
 
 
 
