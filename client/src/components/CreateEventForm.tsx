@@ -267,8 +267,6 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
             <dd>
               {created.registeredCount} / {created.capacity}
             </dd>
-            {/* The created event's page, not just its id: the QR code and
-                the .ics the organizer came for live one click away. */}
             <dt>Event page</dt>
             <dd>
               <Link className="create-event__created-link" to={`/events/${created.id}`}>

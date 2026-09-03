@@ -21,9 +21,8 @@ export function RegistrationQr({ registrationUrl }: RegistrationQrProps) {
         Register on this device, or scan the QR code with a phone.
       </p>
 
-      {/* The call to action, not the URL it points at. The address is long,
-          opaque and useless to read — the QR code below is how it gets to
-          another device, and nobody types it by hand. */}
+      {/* The action, not the URL: nobody types the address by hand, and the QR
+          code below is how it reaches another device. */}
       <a className="registration-qr__link" href={registrationUrl}>
         Register for this event
       </a>

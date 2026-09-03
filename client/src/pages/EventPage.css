@@ -18,9 +18,8 @@
   font-size: 0.875rem;
 }
 
-/* Label above value rather than beside it: "Minimum to fire" and a venue
-   address are both long enough that a two-column grid would wrap badly on a
-   phone, and this needs no breakpoint to behave. */
+/* Label above value: "Minimum to fire" and a venue address both wrap badly in
+   two columns on a phone, and stacking needs no breakpoint. */
 .event__facts {
   display: grid;
   gap: 0.75rem;
@@ -43,8 +42,7 @@
   letter-spacing: 0.04em;
 }
 
-/* A download, so it is sized like the action it is rather than like body
-   text — and tall enough to be a comfortable tap target on a phone. */
+/* Sized as an action, and tall enough to tap on a phone. */
 .event__ics {
   display: inline-flex;
   align-items: center;

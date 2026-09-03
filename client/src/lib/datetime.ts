@@ -1,9 +1,7 @@
-/** Local-time formatting, in one place.
+/** Local-time formatting, shared by the agenda and the event page.
  *
- *  The agenda and the event page have to render the same instant the same way,
- *  and every one of these formatters carries a time-zone decision that is easy
- *  to get subtly wrong. Duplicating them per component is how the two views
- *  drift apart by an hour.
+ *  Each formatter below carries a time-zone decision. Keeping one copy is what
+ *  stops the two views drifting apart by an hour.
  */
 
 /** The zone the organizer is standing in. Which day an event belongs to is a
@@ -23,8 +21,8 @@ const DAY_HEADING = new Intl.DateTimeFormat(undefined, {
   timeZone: 'UTC',
 })
 
-/** The same words as `DAY_HEADING`, but for a real instant, which does belong
- *  in the viewer's zone. */
+/** The same words as `DAY_HEADING`, for a real instant — which does belong in
+ *  the viewer's zone. */
 const INSTANT_DATE = new Intl.DateTimeFormat(undefined, {
   weekday: 'long',
   month: 'long',

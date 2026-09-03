@@ -9,13 +9,10 @@
   margin: 0;
 }
 
-/* The page's primary action, so it is filled rather than outlined — the .ics
-   download beside it is the secondary one and stays a bordered link.
-   `CanvasText` on `Canvas` inverted: the system colours follow the viewer's
-   colour scheme, so the fill stays legible in dark mode without this file
-   hard-coding a palette. Not `currentColor` for the fill — `color` is set on
-   this same element, so `background: currentColor` would paint the label on
-   top of its own colour. */
+/* Filled, as the primary action; the .ics download beside it stays outlined.
+   System colours so the fill follows the viewer's colour scheme without a
+   palette here. Not `currentColor` for the background — `color` is set on this
+   same element, so it would paint the label in its own colour. */
 .registration-qr__link {
   display: inline-flex;
   align-items: center;
@@ -35,8 +32,8 @@
   text-decoration: underline;
 }
 
-/* `CanvasText` explicitly: inside the filled button `currentColor` is `Canvas`,
-   so an outline drawn in it would vanish against the page behind it. */
+/* Named, not `currentColor`: inside the fill that is `Canvas`, which would
+   vanish against the page. */
 .registration-qr__link:focus-visible {
   outline: 3px solid CanvasText;
   outline-offset: 3px;

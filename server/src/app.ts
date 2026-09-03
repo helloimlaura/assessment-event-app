@@ -84,15 +84,9 @@ export function createApp(deps: AppDeps): Express {
     res.json({ event })
   })
 
-  /** Requirement 4: the same event as an .ics the organizer can import into
-   *  Google Calendar or Outlook. Served from the stored event rather than
-   *  from anything the client sends, so the invite and the schedule cannot
-   *  disagree about when the draft fires.
-   *
-   *  The 404 is spelled out rather than left to the catch-all below: this
-   *  route is the one that knows an event was asked for and missed, and a
-   *  reader should not have to trace a fallthrough to find out what an
-   *  unknown id returns. */
+  /** Requirement 4: the same event as an .ics for Google Calendar or Outlook.
+   *  The 404 is spelled out rather than left to the catch-all below, so what an
+   *  unknown id returns is readable here rather than traced through it. */
   app.get('/api/events/:id/calendar.ics', (req, res) => {
     const event = events.findDetail(req.params.id)
     if (event === undefined) {
@@ -107,7 +101,6 @@ export function createApp(deps: AppDeps): Express {
     }
 
     res.type('text/calendar; charset=utf-8')
-    // A browser that followed a link gets a saved file, not a wall of text.
     res.setHeader('Content-Disposition', `attachment; filename="${invite.filename}"`)
     res.send(invite.body)
   })

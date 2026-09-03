@@ -70,11 +70,9 @@ export function EventAgenda() {
                       <time dateTime={event.endsAt}>{formatClock(event.endsAt)}</time>
                     </p>
 
-                    {/* The name is the only anchor, but CSS stretches it over the
-                        whole card, so the card is the click target while the
-                        name stays what a screen reader announces. Every event
-                        here was a dead end before; the QR code an organizer
-                        wants lives one click in. */}
+                    {/* The only anchor, stretched over the whole card by CSS: the
+                        card is the click target, the name stays what a screen
+                        reader announces. */}
                     <p className="agenda__name">
                       <Link className="agenda__link" to={`/events/${event.id}`}>
                         {event.name}

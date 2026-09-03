@@ -6,26 +6,25 @@ import { RegistrationQr } from '../components/RegistrationQr'
 import { formatClock, formatEventDate } from '../lib/datetime'
 import './EventPage.css'
 
-/** What the page is doing, as one value. A boolean pair would allow
- *  "loading and errored at once", which is not a state this page has. */
+/** One value rather than a boolean pair, which would allow "loading and
+ *  errored at once" — not a state this page has. */
 type Load =
   | { kind: 'loading' }
   | { kind: 'missing' }
   | { kind: 'failed' }
   | { kind: 'loaded'; event: EventDetail }
 
-/** The event an organizer runs the shop from: when and where it fires, how
- *  many seats are gone, the invite to hand out, and the QR players scan.
+/** The event an organizer runs the shop from: when and where it fires, seats
+ *  taken, the invite to hand out, the QR players scan, and who has registered.
  *
- *  Owns its own fetch, like the other routes, so navigating here mounts a
- *  fresh copy and the seat count is current without anything telling it that
- *  a registration landed. */
+ *  Owns its own fetch, like the other routes, so navigating here mounts a fresh
+ *  copy and the seat count is current. */
 export function EventPage() {
   const { id } = useParams<{ id: string }>()
 
-  /** Keyed on the id so React discards the whole view when it changes, rather
-   *  than the view resetting its own state in an effect and rendering the
-   *  previous event's roster for a frame first. */
+  /** Keyed on the id so React discards the view when it changes, rather than
+   *  the view resetting its own state and rendering the previous event's roster
+   *  for a frame first. */
   return <EventView key={id} id={id ?? ''} />
 }
 
@@ -37,9 +36,8 @@ function EventView({ id }: { id: string }) {
 
     fetch(`/api/events/${encodeURIComponent(id)}`)
       .then(async (res) => {
-        // A mistyped id and a server that fell over are different problems and
-        // get different words; collapsing them into one message would send an
-        // organizer looking for a bug that is really a typo.
+        // A mistyped id and a server that fell over get different words: one
+        // message for both would send an organizer hunting a bug that is a typo.
         if (res.status === 404) return { kind: 'missing' } as const
         if (!res.ok) throw new Error(String(res.status))
 
@@ -93,8 +91,6 @@ function EventView({ id }: { id: string }) {
         <dt>Seats</dt>
         <dd>
           {event.registeredCount} / {event.capacity}
-          {/* "Full" is a word, not a colour: the count alone already says it,
-              and both survive a monochrome screen. */}
           {event.isFull ? (
             <strong className="event__full"> · Full</strong>
           ) : (
@@ -111,8 +107,7 @@ function EventView({ id }: { id: string }) {
         </dd>
       </dl>
 
-      {/* A plain link, not a fetch-and-blob: the server already sets the
-          filename and the calendar content type, so the browser's own
+      {/* The server sets the filename and content type, so the browser's own
           download handling is the whole feature. */}
       <a className="event__ics" href={`/api/events/${event.id}/calendar.ics`} download>
         Add to calendar (.ics)
@@ -129,7 +124,7 @@ function EventView({ id }: { id: string }) {
           <ol className="event__players">
             {event.registrations.map((registration) => (
               /* Names are unique per event — the schema enforces it on
-                 `player_key` — so the name is a stable key here. */
+                 `player_key` — so the name is a stable key. */
               <li className="event__player" key={registration.playerName}>
                 <span className="event__player-name">{registration.playerName}</span>
                 <time className="event__player-time" dateTime={registration.registeredAt}>
