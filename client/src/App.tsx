@@ -4,6 +4,7 @@ import { EventAgenda } from './components/EventAgenda'
 import { SideNav } from './components/SideNav'
 import { EventPage } from './pages/EventPage'
 import { NewEventPage } from './pages/NewEventPage'
+import { RegisterPage } from './pages/RegisterPage'
 
 /** The layout shell and the route table. Each view owns the data it needs, so
  *  this holds no state of its own. */
@@ -26,6 +27,8 @@ function App() {
               this one. React Router ranks it that way regardless of order. */}
           <Route path="/events/new" element={<NewEventPage />} />
           <Route path="/events/:id" element={<EventPage />} />
+          {/* What `registrationUrl` advertises and the QR code encodes. */}
+          <Route path="/events/:id/register" element={<RegisterPage />} />
           <Route path="*" element={<p>That page does not exist.</p>} />
         </Routes>
       </main>
