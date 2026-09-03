@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS event_type_configs (
   duration_min      INTEGER NOT NULL CHECK (duration_min > 0),
   default_capacity  INTEGER NOT NULL,
   max_capacity      INTEGER NOT NULL CHECK (max_capacity BETWEEN 1 AND 30),
-  min_players       INTEGER NOT NULL CHECK (min_players >= 1),
+  min_players       INTEGER NOT NULL CHECK (min_players >= 2),
   PRIMARY KEY (game_id, event_type),
   CHECK (default_capacity BETWEEN min_players AND max_capacity)
 );

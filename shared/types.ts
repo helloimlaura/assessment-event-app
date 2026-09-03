@@ -8,9 +8,25 @@ export type EventType =
   | 'DRAFT' | 'SEALED' | 'CONSTRUCTED' | 'COMMANDER' | 'PRERELEASE'
 
 export type ErrorCode =
-  | 'VALIDATION_FAILED' | 'NOT_FOUND' | 'EVENT_FULL'
+  | 'MALFORMED_BODY' | 'VALIDATION_FAILED' | 'NOT_FOUND' | 'EVENT_FULL'
   | 'DUPLICATE_REGISTRATION' | 'UNSUPPORTED_EVENT_TYPE'
   | 'INTERNAL'
+
+/** The HTTP status each code answers with, so routes, tests and the README
+ *  cannot drift apart. The 400/422 split is the load-bearing one: 400 means
+ *  the request could not be understood at all (a body that is not JSON), 422
+ *  means it was understood and the domain refused it — a blank name, a
+ *  capacity above the template maximum, a Commander pod for a game that does
+ *  not run Commander. */
+export const ERROR_STATUS: Record<ErrorCode, number> = {
+  MALFORMED_BODY: 400,
+  VALIDATION_FAILED: 422,
+  UNSUPPORTED_EVENT_TYPE: 422,
+  NOT_FOUND: 404,
+  EVENT_FULL: 409,
+  DUPLICATE_REGISTRATION: 409,
+  INTERNAL: 500,
+}
 
 export interface ApiError {
   error: { code: ErrorCode; message: string; fields?: Record<string, string> }

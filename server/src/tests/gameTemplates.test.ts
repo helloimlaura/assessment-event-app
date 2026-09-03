@@ -6,13 +6,15 @@ import {
   createEvent,
   errorBody,
   fetchGames,
+  getEventDetail,
   minutesBetween,
   postEvent,
   startTestServer,
+  VALID_EVENT,
   type TestServer,
 } from './helpers'
-import { createTemplateRegistry, GAME_TEMPLATES } from '../domain/gameTemplates'
-import type { GameTemplate } from '../../../shared/types'
+import type { Db } from '../db'
+import type { EventSummary, GameTemplate } from '../../../shared/types'
 
 describe('game templates', () => {
   let srv: TestServer
@@ -66,17 +68,18 @@ describe('game templates', () => {
   test('the template drives event duration', async () => {
     const games = await fetchGames(srv)
     for (const game of games) {
-      const opt = game.eventTypes[0]
-      const event = await createEvent(srv, {
-        gameId: game.id,
-        eventType: opt.eventType,
-        capacity: opt.defaultCapacity,
-      })
-      assert.equal(
-        minutesBetween(event.startsAt, event.endsAt),
-        opt.durationMin,
-        `${game.id}/${opt.eventType} duration came from somewhere other than the template`,
-      )
+      for (const opt of game.eventTypes) {
+        const event = await createEvent(srv, {
+          gameId: game.id,
+          eventType: opt.eventType,
+          capacity: opt.defaultCapacity,
+        })
+        assert.equal(
+          minutesBetween(event.startsAt, event.endsAt),
+          opt.durationMin,
+          `${game.id}/${opt.eventType} duration came from somewhere other than the template`,
+        )
+      }
     }
   })
 
@@ -103,6 +106,41 @@ describe('game templates', () => {
     assert.equal(event.eventTypeLabel, opt.label)
   })
 
+  test('the template wins over duration and minimum players sent by the client', async () => {
+    // Nothing else proves these are ignored rather than merely absent from
+    // CreateEventRequest: a client can put any JSON on the wire.
+    const mtg = (await fetchGames(srv)).find((g) => g.id === 'mtg')
+    assert.ok(mtg, 'mtg missing')
+    const draft = mtg.eventTypes.find((o) => o.eventType === 'DRAFT')
+    assert.ok(draft, 'mtg/DRAFT missing')
+
+    const res = await fetch(`${srv.url}/api/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...VALID_EVENT,
+        gameId: 'mtg',
+        eventType: 'DRAFT',
+        capacity: draft.defaultCapacity,
+        durationMin: 5,
+        minPlayers: 1,
+      }),
+    })
+    assert.equal(res.status, 201)
+
+    const { event } = (await res.json()) as { event: EventSummary }
+    assert.equal(
+      minutesBetween(event.startsAt, event.endsAt),
+      draft.durationMin,
+      'client-supplied durationMin overrode the template',
+    )
+    assert.equal(
+      (await getEventDetail(srv, event.id)).minPlayers,
+      draft.minPlayers,
+      'client-supplied minPlayers overrode the template',
+    )
+  })
+
   test('an event type the game does not run is rejected', async () => {
     const games = await fetchGames(srv)
     const target = games.find((g) =>
@@ -115,19 +153,27 @@ describe('game templates', () => {
       eventType: 'COMMANDER',
       capacity: undefined,
     })
-    assert.equal(res.status, 400)
+    assert.equal(res.status, 422)
     assert.equal((await errorBody(res)).code, 'UNSUPPORTED_EVENT_TYPE')
   })
 
   test('an unknown game is rejected', async () => {
+    // VALIDATION_FAILED, not NOT_FOUND: nothing was requested that is missing;
+    // a well-formed body named a game that does not exist, which is a bad
+    // field in the payload and is reported as one.
     const res = await postEvent(srv, { gameId: 'not-a-real-game' })
-    assert.equal(res.status, 400)
-    assert.ok(['VALIDATION_FAILED', 'NOT_FOUND'].includes((await errorBody(res)).code))
+    assert.equal(res.status, 422)
+
+    const err = await errorBody(res)
+    assert.equal(err.code, 'VALIDATION_FAILED')
+    assert.ok(
+      err.fields && 'gameId' in err.fields,
+      `expected fields.gameId, got ${JSON.stringify(err.fields)}`,
+    )
   })
 })
 
-describe('adding a fourth game', () => {
-  // The point of the template system: a new game is data, not a code change.
+describe('adding a fourth game through the database', () => {
   const FOURTH_GAME: GameTemplate = {
     id: 'starwars-unlimited',
     name: 'Star Wars: Unlimited',
@@ -143,17 +189,42 @@ describe('adding a fourth game', () => {
     ],
   }
 
+  function insertFourthGame(db: Db): void {
+    const insertGame = db.prepare('INSERT INTO games (id, name) VALUES (?, ?)')
+    const insertEventType = db.prepare(
+      `INSERT INTO event_type_configs
+         (game_id, event_type, label, duration_min, default_capacity, max_capacity, min_players)
+       VALUES
+         (@gameId, @eventType, @label, @durationMin, @defaultCapacity, @maxCapacity, @minPlayers)`,
+    )
+
+    db.transaction(() => {
+      insertGame.run(FOURTH_GAME.id, FOURTH_GAME.name)
+      for (const option of FOURTH_GAME.eventTypes) {
+        insertEventType.run({ gameId: FOURTH_GAME.id, ...option })
+      }
+    })()
+  }
+
   let srv: TestServer
   before(async () => {
-    srv = await startTestServer({
-      templates: createTemplateRegistry([...GAME_TEMPLATES, FOURTH_GAME]),
-    })
+    // The only change another game needs: a `games` row and its
+    // `event_type_configs` rows.
+    srv = await startTestServer({ prepareDb: insertFourthGame })
   })
   after(async () => { await srv.close() })
 
-  test('shows up in the game list with no change to core event logic', async () => {
+  test('is discovered from database rows with no application code change', async () => {
     const games = await fetchGames(srv)
     assert.ok(games.some((g) => g.id === FOURTH_GAME.id))
+
+    // The seed must already have run when prepareDb inserted: if prepareDb
+    // ran first and the seed skipped a non-empty games table, this would be
+    // the *only* game and the suite would be testing nothing.
+    assert.ok(
+      games.length >= 4,
+      `expected the 3 seeded games plus the fourth, got ${games.map((g) => g.id).join(', ')}`,
+    )
   })
 
   test('drives duration and default capacity like any built-in game', async () => {
