@@ -29,10 +29,37 @@
 }
 
 .agenda__event {
+  /* Anchors the stretched link below. */
+  position: relative;
   display: grid;
   gap: 0.125rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid currentColor;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* Stretches the name's anchor over the whole card, so the card is the click
+   target. A pseudo-element rather than a card-wide <a>: one tab stop, and the
+   times and seat count stay out of the link's accessible name. */
+.agenda__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* An inset ring rather than a thicker border, so the row does not shift by a
+   pixel on hover. */
+.agenda__event:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* The outline belongs on the card, not the words, since the card is the click
+   target. `:has(:focus-visible)` rather than `:focus-within` answers the
+   keyboard without firing on a mouse click. */
+.agenda__event:has(.agenda__link:focus-visible) {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
 }
 
 .agenda__event p {
@@ -45,6 +72,19 @@
 
 .agenda__name {
   font-weight: 700;
+}
+
+/* Underlined always: with the whole card clickable, it is what says where the
+   card goes. */
+.agenda__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Suppressed in favour of the card outline above. */
+.agenda__link:focus-visible {
+  outline: none;
 }
 
 .agenda__meta,

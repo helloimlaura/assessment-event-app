@@ -6,6 +6,7 @@ import type { ApiError, ErrorCode } from '../../shared/types'
 import type { Db } from './db'
 import { createEventStore, validateCreateEvent, validateEventWindow } from './domain/events'
 import { createTemplateRegistry } from './domain/gameTemplates'
+import { buildInvite } from './domain/icsInvite'
 
 export interface AppDeps {
   db: Db
@@ -25,7 +26,6 @@ function fail(
   res.status(ERROR_STATUS[code]).json(body)
 }
 
-/** TODO(green): mount registrations. */
 export function createApp(deps: AppDeps): Express {
   /** All game membership and rules come from the same database that stores
    *  events. There is no second, code-owned template list to keep in sync. */
@@ -82,6 +82,27 @@ export function createApp(deps: AppDeps): Express {
     }
 
     res.json({ event })
+  })
+
+  /** Requirement 4: the same event as an .ics for Google Calendar or Outlook.
+   *  The 404 is spelled out rather than left to the catch-all below, so what an
+   *  unknown id returns is readable here rather than traced through it. */
+  app.get('/api/events/:id/calendar.ics', (req, res) => {
+    const event = events.findDetail(req.params.id)
+    if (event === undefined) {
+      fail(res, 'NOT_FOUND', 'No event with that id.')
+      return
+    }
+
+    const invite = buildInvite(event, deps.publicBaseUrl)
+    if (invite === undefined) {
+      fail(res, 'INTERNAL', 'Could not build the calendar invite.')
+      return
+    }
+
+    res.type('text/calendar; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${invite.filename}"`)
+    res.send(invite.body)
   })
 
   // Anything else under /api is a missing endpoint rather than a client-side

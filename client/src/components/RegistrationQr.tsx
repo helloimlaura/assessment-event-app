@@ -18,12 +18,13 @@ export function RegistrationQr({ registrationUrl }: RegistrationQrProps) {
     <section className="registration-qr" aria-label="Event registration">
       <h2 className="registration-qr__heading">Event registration</h2>
       <p className="registration-qr__instructions">
-        Open the registration link on this device, or scan the QR code with another device.
+        Register on this device, or scan the QR code with a phone.
       </p>
 
+      {/* The action, not the URL: nobody types the address by hand, and the QR
+          code below is how it reaches another device. */}
       <a className="registration-qr__link" href={registrationUrl}>
-        <span className="registration-qr__link-label">Open registration</span>
-        <span className="registration-qr__link-url">{registrationUrl}</span>
+        Register for this event
       </a>
 
       <button

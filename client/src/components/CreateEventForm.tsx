@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 import type {
   ApiError,
@@ -266,9 +267,11 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
             <dd>
               {created.registeredCount} / {created.capacity}
             </dd>
-            <dt>Id</dt>
+            <dt>Event page</dt>
             <dd>
-              <code>{created.id}</code>
+              <Link className="create-event__created-link" to={`/events/${created.id}`}>
+                View event and QR code
+              </Link>
             </dd>
           </dl>
         )}

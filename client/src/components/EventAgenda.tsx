@@ -1,38 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { groupEventsByDay } from '../../../shared/calendar'
 import type { CalendarDay } from '../../../shared/calendar'
 import type { EventSummary } from '../../../shared/types'
+import { TIME_ZONE, formatClock, formatDayHeading } from '../lib/datetime'
 import './EventAgenda.css'
-
-export interface EventAgendaProps {
-  /** Changed by the caller when the schedule may have moved on — creating an
-   *  event bumps it — which is what makes the list refetch. */
-  refreshKey?: number
-}
-
-/** The zone the organizer is standing in. Which day an event belongs to is a
- *  local question, so this is the answer the grouping and every rendered time
- *  are given. */
-const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
-
-/** A `CalendarDay.date` is a plain calendar date, not an instant, so it is
- *  formatted as UTC on purpose: reading "2026-10-16" as midnight *local* and
- *  then formatting it would slide the heading to the 15th anywhere west of
- *  Greenwich. */
-const DAY_HEADING = new Intl.DateTimeFormat(undefined, {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-const CLOCK = new Intl.DateTimeFormat(undefined, {
-  hour: 'numeric',
-  minute: '2-digit',
-  timeZone: TIME_ZONE,
-})
 
 /** Midnight this morning, not this instant: an organizer checking the day's
  *  schedule still wants the draft that fired an hour ago on the list. */
@@ -42,7 +15,7 @@ function startOfToday(): string {
   return midnight.toISOString()
 }
 
-export function EventAgenda({ refreshKey }: EventAgendaProps) {
+export function EventAgenda() {
   const [days, setDays] = useState<CalendarDay[]>([])
   const [status, setStatus] = useState('Loading the schedule…')
 
@@ -67,7 +40,10 @@ export function EventAgenda({ refreshKey }: EventAgendaProps) {
     return () => {
       current = false
     }
-  }, [refreshKey])
+    // No dependencies: the agenda is its own route, so navigating to it
+    // mounts a fresh copy and this refetches. Nothing has to tell it that a
+    // new event was created elsewhere.
+  }, [])
 
   return (
     <section className="agenda" aria-labelledby="agenda-heading">
@@ -82,23 +58,26 @@ export function EventAgenda({ refreshKey }: EventAgendaProps) {
           {days.map((day) => (
             <li className="agenda__day" key={day.date}>
               <h3 className="agenda__date">
-                {DAY_HEADING.format(new Date(`${day.date}T00:00:00Z`))}
+                {formatDayHeading(day.date)}
               </h3>
 
               <ol className="agenda__events">
                 {day.events.map((event) => (
                   <li className="agenda__event" key={event.id}>
                     <p className="agenda__time">
-                      <time dateTime={event.startsAt}>
-                        {CLOCK.format(new Date(event.startsAt))}
-                      </time>
+                      <time dateTime={event.startsAt}>{formatClock(event.startsAt)}</time>
                       {' – '}
-                      <time dateTime={event.endsAt}>
-                        {CLOCK.format(new Date(event.endsAt))}
-                      </time>
+                      <time dateTime={event.endsAt}>{formatClock(event.endsAt)}</time>
                     </p>
 
-                    <p className="agenda__name">{event.name}</p>
+                    {/* The only anchor, stretched over the whole card by CSS: the
+                        card is the click target, the name stays what a screen
+                        reader announces. */}
+                    <p className="agenda__name">
+                      <Link className="agenda__link" to={`/events/${event.id}`}>
+                        {event.name}
+                      </Link>
+                    </p>
 
                     <p className="agenda__meta">
                       {event.game.name} · {event.eventTypeLabel} · {event.location}

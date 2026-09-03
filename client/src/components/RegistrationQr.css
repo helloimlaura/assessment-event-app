@@ -9,23 +9,36 @@
   margin: 0;
 }
 
+/* Filled, as the primary action; the .ics download beside it stays outlined.
+   System colours so the fill follows the viewer's colour scheme without a
+   palette here. Not `currentColor` for the background — `color` is set on this
+   same element, so it would paint the label in its own colour. */
 .registration-qr__link {
-  display: grid;
-  gap: 0.25rem;
-  color: inherit;
-  text-underline-offset: 0.2em;
-}
-
-.registration-qr__link-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-block-size: 44px;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid CanvasText;
+  border-radius: 0.5rem;
+  background: CanvasText;
+  color: Canvas;
   font-weight: 700;
+  text-decoration: none;
 }
 
-.registration-qr__link-url {
-  overflow-wrap: anywhere;
-  user-select: text;
+.registration-qr__link:hover {
+  text-decoration: underline;
 }
 
-.registration-qr__link:focus-visible,
+/* Named, not `currentColor`: inside the fill that is `Canvas`, which would
+   vanish against the page. */
+.registration-qr__link:focus-visible {
+  outline: 3px solid CanvasText;
+  outline-offset: 3px;
+}
+
 .registration-qr__toggle:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: 3px;
@@ -49,13 +62,6 @@
 }
 
 @media (max-width: 47.999rem) {
-  .registration-qr__link {
-    min-block-size: 44px;
-    padding: 0.75rem 1rem;
-    border: 2px solid currentColor;
-    border-radius: 0.5rem;
-  }
-
   .registration-qr__toggle {
     display: inline-flex;
     align-items: center;

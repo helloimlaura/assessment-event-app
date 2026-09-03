@@ -4,15 +4,26 @@ body {
   font-family: system-ui, sans-serif;
 }
 
-/* Form and schedule side by side where there is room, stacked where there is
+/* Nav beside the content where there is room, stacked above it where there is
    not. No breakpoint: the columns themselves decide when they no longer fit. */
 .app {
   display: grid;
-  gap: 2rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  gap: 1rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), auto));
   align-items: start;
 }
 
-.app h1 {
+.app__header {
   grid-column: 1 / -1;
+}
+
+.app__header h1 {
+  margin: 0;
+}
+
+.app__content {
+  /* Takes the rest of the row, so the nav column stays as narrow as its
+     longest label. */
+  flex: 1;
+  min-inline-size: 0;
 }
