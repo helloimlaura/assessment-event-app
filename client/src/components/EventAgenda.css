@@ -29,10 +29,41 @@
 }
 
 .agenda__event {
+  /* Anchors the stretched link below. */
+  position: relative;
   display: grid;
   gap: 0.125rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid currentColor;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* The whole card is the target, not just the name. It already looks like a
+   card, so anything less means people click the box and nothing happens.
+   A stretched pseudo-element rather than a card-wide anchor: the card stays
+   one tab stop, the event name stays the link's accessible label, and the
+   times and seat count are not read out as part of it. */
+.agenda__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The smidge: a tint, and a second inset ring so the border reads heavier
+   without the row shifting by a pixel. The overlay above is a real anchor, so
+   the pointer cursor comes for free across the whole card. */
+.agenda__event:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* The outline goes on the card, because the card is what the overlay makes
+   clickable — an outline hugging just the words would point at the wrong
+   target. `:has(:focus-visible)` rather than `:focus-within` so it answers
+   the keyboard and not a mouse click. */
+.agenda__event:has(.agenda__link:focus-visible) {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
 }
 
 .agenda__event p {
@@ -45,6 +76,19 @@
 
 .agenda__name {
   font-weight: 700;
+}
+
+/* Underlined always, not only on hover: with the whole card clickable, the
+   underline is what tells you where the card goes. */
+.agenda__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Suppressed in favour of the card outline above. */
+.agenda__link:focus-visible {
+  outline: none;
 }
 
 .agenda__meta,

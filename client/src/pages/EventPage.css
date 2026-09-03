@@ -1,0 +1,110 @@
+.event {
+  display: grid;
+  gap: 1.5rem;
+  max-inline-size: 32rem;
+}
+
+.event__header {
+  padding-block-end: 0.25rem;
+  border-block-end: 2px solid currentColor;
+}
+
+.event__name {
+  margin: 0;
+}
+
+.event__game {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+/* Label above value rather than beside it: "Minimum to fire" and a venue
+   address are both long enough that a two-column grid would wrap badly on a
+   phone, and this needs no breakpoint to behave. */
+.event__facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.event__facts dt {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.event__facts dd {
+  margin: 0.125rem 0 0;
+}
+
+.event__full {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* A download, so it is sized like the action it is rather than like body
+   text — and tall enough to be a comfortable tap target on a phone. */
+.event__ics {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  padding: 0.625rem 1rem;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  justify-self: start;
+}
+
+.event__ics:hover {
+  text-decoration: underline;
+}
+
+.event__ics:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+
+.event__roster {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.event__roster h3,
+.event__roster p {
+  margin: 0;
+}
+
+.event__players {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: player;
+}
+
+.event__player {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid currentColor;
+  counter-increment: player;
+}
+
+/* The seat number comes from the list order, so it cannot disagree with it. */
+.event__player-name::before {
+  content: counter(player) '. ';
+  font-variant-numeric: tabular-nums;
+}
+
+.event__player-time {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

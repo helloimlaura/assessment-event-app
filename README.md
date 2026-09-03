@@ -27,6 +27,23 @@ npm run dev
 |---|---|
 | `/calendar` | The schedule, grouped by local day. `/` redirects here. |
 | `/events/new` | Create an event. The game select drives the event type, which drives duration and the capacity default and range. |
+| `/events/:id` | One event: when and where, seats taken, the `.ics` download, the registration QR code, and who has registered. Reached by clicking any card on the schedule. |
+
+### Registration links and the QR code
+
+The QR code encodes an absolute URL, so a phone that has never talked to this
+machine can still open it. That origin is configuration, not something read off
+a `Host` header, and defaults to the Vite dev origin — the only one that serves
+the `/events/:id/register` route:
+
+```
+PUBLIC_BASE_URL=http://10.0.0.5:5173 npm run dev   # scan from a real phone
+```
+
+Without it the link says `localhost`, which resolves to the phone itself. The
+server echoes the origin it is advertising at boot, so a wrong one is visible
+before anyone tries to scan. If Vite reports a port other than 5173 because
+5173 was taken, set `PUBLIC_BASE_URL` to match.
 
 Each side can also be run on its own:
 

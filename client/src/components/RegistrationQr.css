@@ -9,23 +9,39 @@
   margin: 0;
 }
 
+/* The page's primary action, so it is filled rather than outlined — the .ics
+   download beside it is the secondary one and stays a bordered link.
+   `CanvasText` on `Canvas` inverted: the system colours follow the viewer's
+   colour scheme, so the fill stays legible in dark mode without this file
+   hard-coding a palette. Not `currentColor` for the fill — `color` is set on
+   this same element, so `background: currentColor` would paint the label on
+   top of its own colour. */
 .registration-qr__link {
-  display: grid;
-  gap: 0.25rem;
-  color: inherit;
-  text-underline-offset: 0.2em;
-}
-
-.registration-qr__link-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-block-size: 44px;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid CanvasText;
+  border-radius: 0.5rem;
+  background: CanvasText;
+  color: Canvas;
   font-weight: 700;
+  text-decoration: none;
 }
 
-.registration-qr__link-url {
-  overflow-wrap: anywhere;
-  user-select: text;
+.registration-qr__link:hover {
+  text-decoration: underline;
 }
 
-.registration-qr__link:focus-visible,
+/* `CanvasText` explicitly: inside the filled button `currentColor` is `Canvas`,
+   so an outline drawn in it would vanish against the page behind it. */
+.registration-qr__link:focus-visible {
+  outline: 3px solid CanvasText;
+  outline-offset: 3px;
+}
+
 .registration-qr__toggle:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: 3px;
@@ -49,13 +65,6 @@
 }
 
 @media (max-width: 47.999rem) {
-  .registration-qr__link {
-    min-block-size: 44px;
-    padding: 0.75rem 1rem;
-    border: 2px solid currentColor;
-    border-radius: 0.5rem;
-  }
-
   .registration-qr__toggle {
     display: inline-flex;
     align-items: center;

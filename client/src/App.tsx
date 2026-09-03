@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { EventAgenda } from './components/EventAgenda'
 import { SideNav } from './components/SideNav'
+import { EventPage } from './pages/EventPage'
 import { NewEventPage } from './pages/NewEventPage'
 
 /** The layout shell and the route table. Each view owns the data it needs, so
@@ -24,6 +25,7 @@ function App() {
           {/* Static before dynamic, so a later `/events/:id` cannot swallow
               this one. React Router ranks it that way regardless of order. */}
           <Route path="/events/new" element={<NewEventPage />} />
+          <Route path="/events/:id" element={<EventPage />} />
           <Route path="*" element={<p>That page does not exist.</p>} />
         </Routes>
       </main>
