@@ -9,7 +9,9 @@
     "start": "node dist/server/src/index.js",
     "seed": "tsx src/db/seed.ts",
     "test:capacity": "tsx src/scripts/capacity-test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/tests/all.ts",
+    "test:watch": "tsx --test --watch src/tests/all.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
