@@ -49,53 +49,56 @@ export function EventAgenda() {
     <section className="agenda" aria-labelledby="agenda-heading">
       <h2 id="agenda-heading">Upcoming events</h2>
 
+      {/* Only the status line is live. The day list deliberately is not: a
+          live region covering it would read the entire schedule aloud on
+          first load, before the reader has asked for any of it. */}
       <div aria-live="polite">
         {status !== '' && <p className="agenda__status">{status}</p>}
-
-        {/* A list of days, each a list of events: the nesting the eye already
-            sees, said out loud for a screen reader too. */}
-        <ol className="agenda__days">
-          {days.map((day) => (
-            <li className="agenda__day" key={day.date}>
-              <h3 className="agenda__date">
-                {formatDayHeading(day.date)}
-              </h3>
-
-              <ol className="agenda__events">
-                {day.events.map((event) => (
-                  <li className="agenda__event" key={event.id}>
-                    <p className="agenda__time">
-                      <time dateTime={event.startsAt}>{formatClock(event.startsAt)}</time>
-                      {' – '}
-                      <time dateTime={event.endsAt}>{formatClock(event.endsAt)}</time>
-                    </p>
-
-                    {/* The only anchor, stretched over the whole card by CSS: the
-                        card is the click target, the name stays what a screen
-                        reader announces. */}
-                    <p className="agenda__name">
-                      <Link className="agenda__link" to={`/events/${event.id}`}>
-                        {event.name}
-                      </Link>
-                    </p>
-
-                    <p className="agenda__meta">
-                      {event.game.name} · {event.eventTypeLabel} · {event.location}
-                    </p>
-
-                    {/* "Full" is a word, not a colour: the seat count alone
-                        already says it, and both survive a monochrome screen. */}
-                    <p className="agenda__seats">
-                      {event.registeredCount} / {event.capacity} seats
-                      {event.isFull && <strong className="agenda__full"> · Full</strong>}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </li>
-          ))}
-        </ol>
       </div>
+
+      {/* A list of days, each a list of events: the nesting the eye already
+          sees, said out loud for a screen reader too. */}
+      <ol className="agenda__days">
+        {days.map((day) => (
+          <li className="agenda__day" key={day.date}>
+            <h3 className="agenda__date">
+              {formatDayHeading(day.date)}
+            </h3>
+
+            <ol className="agenda__events">
+              {day.events.map((event) => (
+                <li className="agenda__event" key={event.id}>
+                  <p className="agenda__time">
+                    <time dateTime={event.startsAt}>{formatClock(event.startsAt)}</time>
+                    {' – '}
+                    <time dateTime={event.endsAt}>{formatClock(event.endsAt)}</time>
+                  </p>
+
+                  {/* The only anchor, stretched over the whole card by CSS: the
+                      card is the click target, the name stays what a screen
+                      reader announces. */}
+                  <p className="agenda__name">
+                    <Link className="agenda__link" to={`/events/${event.id}`}>
+                      {event.name}
+                    </Link>
+                  </p>
+
+                  <p className="agenda__meta">
+                    {event.game.name} · {event.eventTypeLabel} · {event.location}
+                  </p>
+
+                  {/* "Full" is a word, not a colour: the seat count alone
+                      already says it, and both survive a monochrome screen. */}
+                  <p className="agenda__seats">
+                    {event.registeredCount} / {event.capacity} seats
+                    {event.isFull && <strong className="agenda__full"> · Full</strong>}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }

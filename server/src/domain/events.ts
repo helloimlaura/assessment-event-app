@@ -283,7 +283,6 @@ function toSummary(row: EventRow): EventSummary {
 export interface EventStore {
   create: (event: NormalizedEvent) => EventSummary
   list: (window: EventWindow) => EventSummary[]
-  findSummary: (id: string) => EventSummary | undefined
   findDetail: (id: string) => EventDetail | undefined
 }
 
@@ -332,11 +331,6 @@ export function createEventStore(db: Db, publicBaseUrl: string): EventStore {
         from: window.from ?? null,
         to: window.to ?? null,
       }) as EventRow[]).map(toSummary),
-
-    findSummary: (id) => {
-      const row = rowById(id)
-      return row === undefined ? undefined : toSummary(row)
-    },
 
     findDetail: (id) => {
       const row = rowById(id)

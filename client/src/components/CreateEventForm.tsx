@@ -6,7 +6,6 @@ import type {
   ApiError,
   CreateEventRequest,
   EventSummary,
-  EventType,
   EventTypeOption,
   GameTemplate,
 } from '../../../shared/types'
@@ -83,7 +82,7 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
     const body: CreateEventRequest = {
       name,
       gameId,
-      eventType: eventType as EventType,
+      eventType,
       startsAt: toIsoWithLocalOffset(startsAt),
       location,
       ...(capacity === '' ? {} : { capacity: Number(capacity) }),
@@ -159,6 +158,8 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
             id={ids.gameId}
             value={gameId}
             onChange={(e) => chooseGame(e.target.value)}
+            aria-invalid={fieldErrors.gameId !== undefined}
+            aria-describedby={errorId('gameId')}
           >
             {games.map((g) => (
               <option key={g.id} value={g.id}>
@@ -178,6 +179,8 @@ export function CreateEventForm({ games, onCreated }: CreateEventFormProps) {
               setEventType(e.target.value)
               setCapacity('')
             }}
+            aria-invalid={fieldErrors.eventType !== undefined}
+            aria-describedby={errorId('eventType')}
           >
             {(game?.eventTypes ?? []).map((o) => (
               <option key={o.eventType} value={o.eventType}>

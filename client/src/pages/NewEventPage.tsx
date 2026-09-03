@@ -14,11 +14,14 @@ export function NewEventPage() {
     let current = true
 
     fetch('/api/games')
-      .then((res) => res.json())
-      .then((data: { games: GameTemplate[] }) => {
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status))
+        return res.json() as Promise<{ games: GameTemplate[] }>
+      })
+      .then(({ games }) => {
         if (!current) return
-        setGames(data.games)
-        setStatus(data.games.length > 0 ? '' : 'No games are configured.')
+        setGames(games)
+        setStatus(games.length > 0 ? '' : 'No games are configured.')
       })
       .catch(() => {
         if (current) setStatus('Could not reach the server.')

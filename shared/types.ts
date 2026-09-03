@@ -1,11 +1,8 @@
-/** The kind of event being run. The assignment calls these "play formats";
- *  this codebase always calls them **event types**, because "format" on its own
- *  means deck-building format (Modern, Core Constructed, Expanded) — a separate,
- *  out-of-scope concept. Which event types a game offers, and the duration,
- *  capacity and minimum-player rules each one implies, come from that game's
- *  template. See EventTypeOption. */
-export type EventType =
-  | 'DRAFT' | 'SEALED' | 'CONSTRUCTED' | 'COMMANDER' | 'PRERELEASE'
+/** Machine identifier for an event type, e.g. "DRAFT". Not a closed union:
+ *  the set of valid values is whatever `event_type_configs` contains for a
+ *  given game, and is enforced by `validateCreateEvent` and the composite
+ *  foreign key on `events`, not by the compiler. */
+export type EventType = string
 
 export type ErrorCode =
   | 'MALFORMED_BODY' | 'VALIDATION_FAILED' | 'NOT_FOUND' | 'EVENT_FULL'
