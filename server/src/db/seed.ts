@@ -38,6 +38,7 @@ const GAMES: GameSeed[] = [
       { eventType: 'SEALED', label: 'Sealed Deck', durationMin: 240, defaultCapacity: 16, maxCapacity: 30, minPlayers: 6 },
       { eventType: 'CONSTRUCTED', label: 'Constructed', durationMin: 180, defaultCapacity: 24, maxCapacity: 30, minPlayers: 4 },
       { eventType: 'COMMANDER', label: 'Commander Pod', durationMin: 120, defaultCapacity: 16, maxCapacity: 30, minPlayers: 4 },
+      { eventType: 'PRERELEASE', label: 'Prerelease', durationMin: 240, defaultCapacity: 24, maxCapacity: 30, minPlayers: 8 },
     ],
   },
   {
@@ -78,11 +79,21 @@ interface DemoEventSeed {
 const VENUE = 'Card Kingdom, 5105 Leary Ave NW, Seattle, WA'
 
 /** Player names are Dickens characters — unmistakably fictional, so no demo
- *  registration can be mistaken for a real person's. */
+ *  registration can be mistaken for a real person's.
+ *
+ *  A name states neither a weekday nor a seat count, and adding either is a
+ *  regression. `dayOffset` is relative to whenever the seed runs, so a
+ *  "Thursday Draft" lands on a Thursday only by coincidence; a "1 seat left"
+ *  goes stale on the next registration. The row already carries both facts,
+ *  and the UI renders them — the agenda groups by local day, and the seat
+ *  line reads "7 / 8 · 1 left". */
 const DEMO_EVENTS: DemoEventSeed[] = [
   {
-    id: 'demo-mtg-draft-thursday',
-    name: 'Thursday Draft — 1 seat left',
+    // Seven of eight seats taken: the one demo event deliberately left a
+    // single registration from full, so the last-seat refusal can be walked
+    // through in the browser without setting it up first.
+    id: 'demo-mtg-draft',
+    name: 'Booster Draft Pod',
     gameId: 'mtg',
     eventType: 'DRAFT',
     dayOffset: 3,
@@ -94,8 +105,8 @@ const DEMO_EVENTS: DemoEventSeed[] = [
     ],
   },
   {
-    id: 'demo-mtg-constructed-friday',
-    name: 'Friday Night Constructed',
+    id: 'demo-mtg-constructed',
+    name: 'Standard Showdown',
     gameId: 'mtg',
     eventType: 'CONSTRUCTED',
     dayOffset: 5,
@@ -115,7 +126,7 @@ const DEMO_EVENTS: DemoEventSeed[] = [
   },
   {
     id: 'demo-pokemon-prerelease',
-    name: 'Prerelease Weekend',
+    name: 'Prerelease Celebration',
     gameId: 'pokemon',
     eventType: 'PRERELEASE',
     dayOffset: 9,
@@ -124,8 +135,8 @@ const DEMO_EVENTS: DemoEventSeed[] = [
     players: ['Samuel Pickwick'],
   },
   {
-    id: 'demo-lorcana-sealed-saturday',
-    name: 'Sealed Deck Saturday',
+    id: 'demo-lorcana-sealed',
+    name: 'Sealed Deck Open',
     gameId: 'lorcana',
     eventType: 'SEALED',
     dayOffset: 6,
@@ -135,7 +146,7 @@ const DEMO_EVENTS: DemoEventSeed[] = [
   },
   {
     id: 'demo-lorcana-draft',
-    name: 'Booster Draft Night',
+    name: 'Casual Booster Draft',
     gameId: 'lorcana',
     eventType: 'DRAFT',
     dayOffset: 12,
